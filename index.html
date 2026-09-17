@@ -1,0 +1,2251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>小X</title>
+
+    <!-- PWA（新增） -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="梦角">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+
+    <!-- 外部CSS引入，空文件也能正常渲染 -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- 连接状态样式（可直接用，也可以挪到 css/style.css 里） -->
+    <style>
+        /* 连接状态 */
+        .connection-status-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 4px;
+            margin-bottom: 8px;
+        }
+        .connection-label {
+            font-size: 12px;
+            color: #999;
+        }
+        .connection-hearts {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .conn-heart {
+            font-size: 14px;
+            line-height: 1;
+            color: #ddd;
+            transition: color 0.2s;
+        }
+        .conn-heart::before {
+            content: '♡';
+        }
+        .conn-heart.filled {
+            color: #ff6b81;
+        }
+        .conn-heart.filled::before {
+            content: '♥';
+        }
+    </style>
+</head>
+<body>
+    <!-- 全局顶部导航栏（所有页面共用头部，后续JS控制显示隐藏） -->
+    <header class="app-global-header">
+        <button class="btn-close-app">×</button>
+        <h1 class="app-title">梦角</h1>
+        <button class="btn-share-app">↗</button>
+    </header>
+
+    <!-- 所有页面容器，后续JS控制切换显示 -->
+    <div class="all-pages-wrap">
+
+        <!-- ============================================== -->
+        <!-- 第1页：刚点进去的首页（梦角主页） -->
+        <!-- ============================================== -->
+        <div class="page page-home-first" data-page="homeFirst">
+            <div class="home-user-avatar-row">
+                <div class="user-card user-card-ta">
+                    <div class="avatar avatar-ta-big"></div>
+                    <p class="username">TA</p>
+                </div>
+                <!-- 线条空心爱心，后续CSS绘制灰色线条 -->
+                <span class="icon-heart-line-empty"></span>
+                <div class="user-card user-card-me">
+                    <div class="avatar avatar-me-big"></div>
+                    <p class="username">我</p>
+                </div>
+            </div>
+
+            <!-- 【新增】连接状态：六个小爱心 -->
+            <div class="connection-status-row">
+                <span class="connection-label">连接状态</span>
+                <div class="connection-hearts" id="connectionHearts">
+                    <span class="conn-heart"></span>
+                    <span class="conn-heart"></span>
+                    <span class="conn-heart"></span>
+                    <span class="conn-heart"></span>
+                    <span class="conn-heart"></span>
+                    <span class="conn-heart"></span>
+                </div>
+            </div>
+
+            <div class="home-text-card-row">
+                <div class="card card-daily-love">
+                    <p class="card-label">今日情话</p>
+                    <p class="card-content">和你在一起，每天都是好天气。</p>
+                </div>
+                <div class="card card-daily-memo">
+                    <p class="card-label">今日备忘</p>
+                    <p class="card-placeholder">点这里记一句话</p>
+                </div>
+            </div>
+
+            <div class="card card-checkin">
+                <div class="checkin-text-wrap">
+                    <p class="checkin-title">和 TA 一起 · 今天也要甜甜的</p>
+                    <p class="checkin-count">连续打卡 0 天</p>
+                </div>
+                <button class="btn-checkin">打卡</button>
+            </div>
+
+            <!-- 首页第一页功能入口 -->
+            <div class="home-function-grid home-grid-first">
+                <div class="func-item" data-target-page="chatList">
+                    <div class="func-icon icon-chat-line"></div>
+                    <span class="func-name">聊天</span>
+                </div>
+                <div class="func-item" data-target-popup="anniversaryPopup">
+                    <div class="func-icon icon-date-line"></div>
+                    <span class="func-name">纪念日</span>
+                </div>
+                <div class="func-item" data-target-page="letterPage">
+                    <div class="func-icon icon-letter-line"></div>
+                    <span class="func-name">❤️信件❤️</span>
+                </div>
+                <div class="func-item" data-target-page="momentsPage">
+                    <div class="func-icon icon-moments-line"></div>
+                    <span class="func-name">朋友圈</span>
+                </div>
+                <div class="func-item" data-target-page="periodPage">
+                    <div class="func-icon icon-period-line"></div>
+                    <span class="func-name">经期记录</span>
+                </div>
+                <div class="func-item" data-target-page="messageRecordPage">
+                    <div class="func-icon icon-stat-line"></div>
+                    <span class="func-name">消息记录</span>
+                </div>
+                <div class="func-item" data-target-page="divinationPage">
+                    <div class="func-icon icon-star-line"></div>
+                    <span class="func-name">占卜</span>
+                </div>
+                <div class="func-item" data-target-page="favoritePage">
+                    <div class="func-icon icon-collect-line"></div>
+                    <span class="func-name">收藏</span>
+                </div>
+            </div>
+
+            <!-- 首页翻页提示，后续JS做左右滑动切换第二页 -->
+            <div class="home-page-indicator">
+                <span class="indicator-dot active"></span>
+                <span class="indicator-dot"></span>
+            </div>
+
+            <!-- 预留后续首页功能扩展位 -->
+            <div class="space-for-future home-future-space-1"></div>
+            <div class="space-for-future home-future-space-2"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第2页：聊天列表页（点“聊天”进入，右上角搜索） -->
+        <!-- ============================================== -->
+        <div class="page page-chat-list" data-page="chatList">
+            <header class="page-sub-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">聊天</h2>
+                <!-- 右上角搜索框，梦角多了以后可以搜索 -->
+                <input type="text" class="search-input chat-search" placeholder="搜索">
+            </header>
+
+            <div class="chat-list-container">
+                <!-- 聊天列表项，后续JS动态生成更多梦角 -->
+                <div class="chat-list-item" data-target-page="chatRoom">
+                    <div class="avatar avatar-ta-small"></div>
+                    <div class="chat-item-info">
+                        <p class="chat-item-name">TA</p>
+                        <p class="chat-item-last-msg">暂无消息</p>
+                    </div>
+                    <span class="chat-item-time"></span>
+                </div>
+            </div>
+
+            <!-- 预留更多聊天列表扩展位 -->
+            <div class="space-for-future chat-list-future"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第3页：聊天会话页面（空白聊天，空心爱心，气泡预留class） -->
+        <!-- ============================================== -->
+        <div class="page page-chat-room" data-page="chatRoom">
+            <header class="page-sub-header chat-room-header">
+                <button class="btn-back">←</button>
+                <div class="chat-header-user-info">
+                    <div class="avatar avatar-ta-small"></div>
+                    <span class="chat-header-name">TA</span>
+                </div>
+                <div class="chat-header-right-btns">
+                    <button class="btn-call-out">📞</button>
+                    <button class="btn-chat-more">⋯</button>
+                </div>
+            </header>
+
+            <!-- 聊天消息容器 -->
+            <main class="chat-message-container">
+                <!-- 空聊天状态：线条空心爱心，替换原来的笑脸 -->
+                <div class="empty-chat-tip">
+                    <span class="icon-heart-line-empty big"></span>
+                    <p class="empty-chat-text">还没有聊天哦，快来增加感情吧</p>
+                </div>
+
+                <!-- 消息列表，有消息时渲染，空的时候隐藏 -->
+                <!-- 注意：气泡颜色后续CSS控制，用户气泡黑色，梦角气泡白色，HTML不写样式 -->
+                <div class="message-list">
+                    <!-- 梦角消息（白色气泡） -->
+                    <div class="message-row message-other">
+                        <div class="avatar avatar-ta-small"></div>
+                        <div class="msg-bubble bubble-other">
+                            <p class="bubble-text">TA 发送的消息内容</p>
+                        </div>
+                        <span class="msg-time">13:45</span>
+                    </div>
+
+                    <!-- 用户消息（黑色气泡） -->
+                    <div class="message-row message-self">
+                        <div class="msg-bubble bubble-self">
+                            <p class="bubble-text">我发送的消息内容</p>
+                        </div>
+                        <div class="avatar avatar-me-small"></div>
+                        <span class="msg-time">13:45</span>
+                    </div>
+
+                    <!-- 通话记录消息卡片 -->
+                    <div class="message-row message-call-record">
+                        <div class="msg-bubble bubble-call">
+                            <p class="bubble-text">📞 通话 00:00</p>
+                        </div>
+                        <div class="avatar avatar-ta-small"></div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- 底部消息输入区域 -->
+            <footer class="chat-input-bar">
+                <input type="text" class="msg-input" placeholder="">
+                <button class="btn-emoji">●</button>
+                <button class="btn-add-more">+</button>
+                <button class="btn-send-msg">发送</button>
+            </footer>
+
+            <!-- 预留聊天页面扩展位 -->
+            <div class="space-for-future chat-room-future"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第4页：用户给梦角拨电话页面（弹窗形式） -->
+        <!-- ============================================== -->
+        <div class="popup popup-call-out" data-popup="callOut">
+            <div class="popup-box call-out-box">
+                <div class="call-out-avatar-wrap">
+                    <div class="avatar avatar-ta-big"></div>
+                    <p class="call-name">TA</p>
+                    <p class="call-status">正在呼叫...</p>
+                    <p class="call-time-count">00:00</p>
+                </div>
+                <!-- 挂断按钮，这个弹窗没有其他关闭按钮，所以用× -->
+                <button class="btn-hangup-call">×</button>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第5页：通话中悬浮小化窗口（只要头像、通话时间、挂断按钮） -->
+        <!-- ============================================== -->
+        <div class="float-window float-call-mini" data-float="callMini">
+            <div class="float-call-avatar avatar-ta-small"></div>
+            <div class="float-call-info">
+                <p class="float-call-name">TA</p>
+                <p class="float-call-time">00:10</p>
+            </div>
+            <!-- 挂断按钮，悬浮窗没有其他关闭按钮，用挂断图标 -->
+            <button class="btn-hangup-float">📞</button>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第6页：梦角给用户来电话（屏幕中间悬浮弹窗，15秒倒计时，没接自动挂断） -->
+        <!-- ============================================== -->
+        <div class="popup popup-call-in" data-popup="callIn">
+            <div class="popup-box call-in-box">
+                <h3 class="call-in-title">语音通话</h3>
+                <div class="avatar avatar-ta-big"></div>
+                <p class="call-name">TA</p>
+                <p class="call-in-tip">对方来电...</p>
+                <p class="call-time-count">00:00</p>
+                <!-- 15秒倒计时提示，后续JS做倒计时 -->
+                <p class="call-countdown-tip">15 秒后未接听自动挂断</p>
+                <div class="call-in-btn-row">
+                    <button class="btn-reject-call">拒绝</button>
+                    <button class="btn-accept-call">接听</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第7页：聊天信息页面（右上角三个点点进去） -->
+        <!-- ============================================== -->
+        <div class="page page-chat-info" data-page="chatInfo">
+            <header class="page-sub-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">聊天信息</h2>
+            </header>
+
+            <div class="chat-info-list">
+                <div class="info-row info-row-user">
+                    <div class="avatar avatar-ta"></div>
+                    <span class="info-row-name">TA</span>
+                    <span class="arrow-right">›</span>
+                </div>
+
+                <div class="info-row" data-target-popup="createGroupPopup">
+                    <span>+ 发起群聊</span>
+                    <span class="arrow-right">›</span>
+                </div>
+
+                <div class="switch-row">
+                    <span>消息免打扰</span>
+                    <div class="switch-toggle"></div>
+                </div>
+                <div class="switch-row">
+                    <span>置顶聊天</span>
+                    <div class="switch-toggle"></div>
+                </div>
+
+                <div class="info-row" data-target-popup="bgSettingPopup">
+                    <span>背景</span>
+                    <span class="arrow-right">›</span>
+                </div>
+                <div class="info-row" data-target-popup="bubbleSettingPopup">
+                    <span>气泡</span>
+                    <span class="info-row-meta">14px</span>
+                    <span class="arrow-right">›</span>
+                </div>
+                <div class="info-row" data-target-popup="textSettingPopup">
+                    <span>文字</span>
+                    <span class="info-row-meta">14px</span>
+                    <span class="arrow-right">›</span>
+                </div>
+                <div class="info-row" data-target-popup="avatarSettingPopup">
+                    <span>头像</span>
+                    <span class="info-row-meta">圆形 · 38px</span>
+                    <span class="arrow-right">›</span>
+                </div>
+                <div class="info-row" data-target-popup="readTimeSettingPopup">
+                    <span>时间戳 / 已读</span>
+                    <span class="info-row-meta">时间戳 · 未读</span>
+                    <span class="arrow-right">›</span>
+                </div>
+                <div class="info-row" data-target-popup="chatDataPopup">
+                    <span>数据</span>
+                    <span class="arrow-right">›</span>
+                </div>
+            </div>
+
+            <!-- 预留聊天信息页扩展位 -->
+            <div class="space-for-future chat-info-future"></div>
+
+                    <!-- 角色资料编辑弹窗 -->
+            <div class="popup popup-character-profile">
+                <div class="popup-box character-profile-box">
+                    <h3>角色资料</h3>
+                    <div class="form-item" style="text-align:center">
+                        <div class="avatar avatar-ta-big character-avatar-preview" style="margin:0 auto 10px"></div>
+                        <button class="btn-upload-avatar" style="border:none;background:#f4f4f4;padding:8px 16px;border-radius:14px;font-size:14px;cursor:pointer">更换头像</button>
+                    </div>
+                    <div class="form-item">
+                        <label>名字</label>
+                        <input type="text" class="character-name-input" placeholder="TA 的名字">
+                    </div>
+                    <div class="form-item">
+                        <label>备注</label>
+                        <input type="text" class="character-remark-input" placeholder="如：老公、主人、小可爱…">
+                    </div>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-close">关闭</button>
+                        <button class="btn-popup-save">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预留聊天信息页扩展位 -->
+            <div class="space-for-future chat-info-future"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第8页：发起群聊弹窗 -->
+        <!-- ============================================== -->
+        <div class="popup popup-create-group" data-popup="createGroup">
+            <div class="popup-box create-group-box">
+                <div class="popup-head">
+                    <h3>发起群聊</h3>
+                    <!-- 这个弹窗有底部关闭按钮，所以不写× -->
+                </div>
+                <div class="form-item">
+                    <label>群聊名称</label>
+                    <input type="text" value="TA">
+                </div>
+                <p class="sub-label">群成员</p>
+                <div class="member-list">
+                    <div class="member-item">
+                        <div class="avatar avatar-ta-small"></div>
+                        <span>TA</span>
+                    </div>
+                </div>
+                <button class="btn-add-member">+ 添加群成员</button>
+                <div class="popup-btn-row">
+                    <button class="btn-popup-close">关闭</button>
+                    <button class="btn-popup-confirm">创建</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第9页：聊天数据弹窗（导出/导入/删除） -->
+        <!-- ============================================== -->
+        <div class="popup popup-chat-data" data-popup="chatData">
+            <div class="popup-box chat-data-box">
+                <h3>聊天数据</h3>
+                <button class="popup-option-btn">导出聊天记录</button>
+                <button class="popup-option-btn">导入聊天记录</button>
+                <button class="popup-option-btn danger">删除聊天记录</button>
+                <button class="popup-option-btn">取消</button>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第10页：时间戳 / 已读未读设置弹窗 -->
+        <!-- ============================================== -->
+        <div class="popup popup-read-time-setting" data-popup="readTimeSetting">
+            <div class="popup-box read-time-box">
+                <h3>时间戳 / 已读</h3>
+                <div class="select-row">
+                    <span>显示时间戳</span>
+                    <span class="arrow-right">›</span>
+                </div>
+                <div class="select-row">
+                    <span>显示已读</span>
+                    <span class="arrow-right">›</span>
+                </div>
+                <div class="popup-btn-row">
+                    <button class="btn-popup-confirm">完成</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第11页：头像形状和大小设置弹窗 -->
+        <!-- ============================================== -->
+        <div class="popup popup-avatar-setting" data-popup="avatarSetting">
+            <div class="popup-box avatar-setting-box">
+                <h3>头像设置</h3>
+                <p class="sub-label">形状</p>
+                <div class="shape-select-row">
+                    <button class="shape-btn active">圆形</button>
+                    <button class="shape-btn">方形</button>
+                </div>
+                <div class="form-item">
+                    <label>大小（px）</label>
+                    <input type="number" value="38">
+                </div>
+                <div class="popup-btn-row">
+                    <button class="btn-popup-cancel">取消</button>
+                    <button class="btn-popup-confirm">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第12页：文字设置弹窗 -->
+        <!-- ============================================== -->
+        <div class="popup popup-text-setting" data-popup="textSetting">
+            <div class="popup-box text-setting-box">
+                <h3>文字设置</h3>
+                <div class="form-item">
+                    <label>文字大小（px）</label>
+                    <input type="number" value="14">
+                </div>
+                <div class="form-item">
+                    <label>文字 CSS 链接（可选）</label>
+                    <input type="text" placeholder="https://.../text.css">
+                </div>
+                <button class="btn-upload-css">或上传 CSS 文件</button>
+                <div class="form-item">
+                    <label>自定义 CSS 代码（可选）</label>
+                    <textarea></textarea>
+                </div>
+                <div class="popup-btn-row">
+                    <button class="btn-popup-cancel">取消</button>
+                    <button class="btn-popup-confirm">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第13页：气泡设置弹窗 -->
+        <!-- ============================================== -->
+        <div class="popup popup-bubble-setting" data-popup="bubbleSetting">
+            <div class="popup-box bubble-setting-box">
+                <h3>气泡设置</h3>
+                <div class="form-item">
+                    <label>气泡大小（px）</label>
+                    <input type="number" value="14">
+                </div>
+                <div class="form-item">
+                    <label>圆角（px）</label>
+                    <input type="number" value="15">
+                </div>
+                <p class="sub-label">气泡颜色（我）</p>
+                <div class="color-select-grid">
+                    <div class="color-block"></div>
+                    <div class="color-block"></div>
+                    <div class="color-block"></div>
+                    <div class="color-block"></div>
+                    <div class="color-block"></div>
+                    <div class="color-block"></div>
+                    <div class="color-block"></div>
+                    <div class="color-block"></div>
+                </div>
+                <div class="form-item">
+                    <label>气泡 CSS 链接（可选）</label>
+                    <input type="text" placeholder="https://.../bubble.css">
+                </div>
+                <button class="btn-upload-css">或上传 CSS 文件</button>
+                <div class="form-item">
+                    <label>自定义 CSS 代码（可选）</label>
+                    <textarea></textarea>
+                </div>
+                <div class="popup-btn-row">
+                    <button class="btn-popup-cancel">取消</button>
+                    <button class="btn-popup-confirm">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第14页：聊天背景设置弹窗 -->
+        <!-- ============================================== -->
+        <div class="popup popup-bg-setting" data-popup="bgSetting">
+            <div class="popup-box bg-setting-box">
+                <h3>聊天背景</h3>
+                <div class="color-select-grid">
+                    <div class="color-block"></div>
+                    <div class="color-block"></div>
+                    <div class="color-block"></div>
+                    <div class="color-block"></div>
+                    <div class="color-block"></div>
+                    <div class="color-block"></div>
+                    <div class="color-block"></div>
+                </div>
+                <div class="popup-btn-row">
+                    <button class="btn-popup-cancel">取消</button>
+                    <button class="btn-popup-confirm">上传图片</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第15页：首页纪念日点进去的弹窗 -->
+        <!-- ============================================== -->
+        <div class="popup popup-anniversary" data-popup="anniversary">
+            <div class="popup-box anniversary-box">
+                <h3>纪念日</h3>
+                <div class="anniversary-empty">
+                    <p class="empty-text">还没有纪念日</p>
+                </div>
+                <button class="btn-add-anniversary">+ 添加纪念日</button>
+                <div class="popup-btn-row">
+                    <button class="btn-popup-close">关闭</button>
+                </div>
+                <!-- 预留纪念日扩展位 -->
+                <div class="space-for-future anniversary-future"></div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第16页：信件页面（❤️信件❤️，灰色线条emoji，空心爱心，无英文无金色） -->
+        <!-- ============================================== -->
+        <div class="page page-letter" data-page="letterPage">
+            <header class="page-sub-header">
+                <button class="btn-back">←</button>
+                <!-- 标题只有❤️信件❤️，没有英文没有金色 -->
+                <h2 class="sub-page-title">❤️信件❤️</h2>
+            </header>
+
+            <div class="letter-tab-row">
+                <button class="letter-tab-btn active">寄出的信</button>
+                <button class="letter-tab-btn">收到的信</button>
+                <button class="letter-tab-btn">时空来信</button>
+            </div>
+
+            <!-- Tab1：寄出的信 -->
+            <div class="letter-tab-content tab-send active">
+                <div class="letter-empty-icon icon-letter-line"></div>
+                <p class="empty-text">还没有寄出任何信件</p>
+                <p class="empty-tip">提笔写下心意，寄送给Ta吧~</p>
+                <button class="btn-write-letter">提笔写信</button>
+                <button class="btn-close-letter-tab">关闭</button>
+            </div>
+
+            <!-- Tab2：收到的信 -->
+            <div class="letter-tab-content tab-receive">
+                <div class="letter-empty-icon icon-letter-line"></div>
+                <p class="empty-text">还没有收到回信</p>
+                <p class="empty-tip">对方正在认真回复中，请稍候~</p>
+                <button class="btn-write-letter">提笔写信</button>
+                <button class="btn-close-letter-tab">关闭</button>
+            </div>
+
+            <!-- Tab3：时空来信 -->
+            <div class="letter-tab-content tab-time">
+                <div class="letter-empty-icon icon-globe-line"></div>
+                <p class="empty-text">还没有收到时空来信</p>
+                <p class="empty-tip">开启"主动给我写信"后，系统会随机给你写信~</p>
+                <button class="btn-write-letter">提笔写信</button>
+                <button class="btn-close-letter-tab">关闭</button>
+            </div>
+
+            <!-- 预留信件页面扩展位 -->
+            <div class="space-for-future letter-future-1"></div>
+            <div class="space-for-future letter-future-2"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第17页：朋友圈页面 -->
+        <!-- ============================================== -->
+        <div class="page page-moments" data-page="momentsPage">
+            <header class="page-sub-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">朋友圈</h2>
+                <div class="moments-header-right">
+                    <!-- 铃铛：看访问记录 -->
+                    <button class="btn-moments-visit">🔔</button>
+                    <!-- 加号：用户发朋友圈，旁边的方块去掉了，改成点击背景换背景 -->
+                    <button class="btn-moments-publish">+</button>
+                </div>
+            </header>
+
+            <!-- 朋友圈背景区域，点击这个区域更换背景 -->
+            <div class="moments-bg-area" id="momentsBgChange">
+                <div class="moments-user-card">
+                    <div class="avatar avatar-me"></div>
+                    <span class="username">我</span>
+                </div>
+            </div>
+
+            <div class="moments-list-container">
+                <div class="empty-tip">还没有动态</div>
+            </div>
+
+            <!-- 发布朋友圈弹窗 -->
+            <div class="popup popup-publish-moment">
+                <div class="popup-box publish-moment-box">
+                    <div class="popup-head">
+                        <h3>发布朋友圈</h3>
+                        <!-- 有底部取消按钮，不写× -->
+                    </div>
+                    <textarea class="moment-input" placeholder="写下动态..."></textarea>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-cancel">取消</button>
+                        <button class="btn-popup-confirm">发布</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 朋友圈访问记录弹窗（铃铛点击打开） -->
+            <div class="popup popup-moments-visit">
+                <div class="popup-box visit-box">
+                    <h3>访问记录</h3>
+                    <div class="visit-list">
+                        <p class="empty-text">暂无访问记录</p>
+                    </div>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-close">关闭</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预留朋友圈扩展位 -->
+            <div class="space-for-future moments-future-1"></div>
+            <div class="space-for-future moments-future-2"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第18页：经期记录页面 -->
+        <!-- ============================================== -->
+        <div class="page page-period" data-page="periodPage">
+            <header class="page-sub-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">经期记录</h2>
+                <div class="period-header-right">
+                    <button class="btn-period-notify">🔔</button>
+                    <button class="btn-period-setting">⚙️</button>
+                </div>
+            </header>
+
+            <div class="period-top-card">
+                <div class="period-empty-circle">—</div>
+                <h3>暂无记录</h3>
+                <p class="period-tip">点下方按钮标记本次经期开始</p>
+                <div class="period-tab-row">
+                    <button class="period-tab-btn active">经期</button>
+                    <button class="period-tab-btn">排卵期</button>
+                </div>
+                <div class="period-btn-row">
+                    <button class="btn-mark-period-start">标记今天开始</button>
+                    <button class="btn-record-today">记录今天</button>
+                </div>
+            </div>
+
+            <div class="period-calendar-card">
+                <div class="calendar-header">
+                    <button class="btn-cal-prev">←</button>
+                    <span class="calendar-month">2026 年 9 月</span>
+                    <button class="btn-cal-next">→</button>
+                </div>
+                <div class="calendar-legend">
+                    <span class="legend-item"><span class="legend-dot period-dot"></span>经期</span>
+                    <span class="legend-item"><span class="legend-dot predict-dot"></span>预测</span>
+                    <span class="legend-item"><span class="legend-dot ovulation-dot"></span>排卵期</span>
+                </div>
+                <div class="calendar-grid">
+                    <div class="calendar-week">日</div>
+                    <div class="calendar-week">一</div>
+                    <div class="calendar-week">二</div>
+                    <div class="calendar-week">三</div>
+                    <div class="calendar-week">四</div>
+                    <div class="calendar-week">五</div>
+                    <div class="calendar-week">六</div>
+                    <!-- 日历格子 -->
+                    <div class="calendar-day">1</div>
+                    <div class="calendar-day">2</div>
+                    <div class="calendar-day">3</div>
+                    <div class="calendar-day">4</div>
+                    <div class="calendar-day">5</div>
+                    <div class="calendar-day">6</div>
+                    <div class="calendar-day">7</div>
+                    <div class="calendar-day">8</div>
+                    <div class="calendar-day">9</div>
+                    <div class="calendar-day">10</div>
+                    <div class="calendar-day">11</div>
+                    <div class="calendar-day">12</div>
+                    <div class="calendar-day">13</div>
+                    <div class="calendar-day">14</div>
+                    <div class="calendar-day">15</div>
+                    <div class="calendar-day active">16</div>
+                    <div class="calendar-day">17</div>
+                    <div class="calendar-day">18</div>
+                    <div class="calendar-day">19</div>
+                    <div class="calendar-day">20</div>
+                    <div class="calendar-day">21</div>
+                    <div class="calendar-day">22</div>
+                    <div class="calendar-day">23</div>
+                    <div class="calendar-day">24</div>
+                    <div class="calendar-day">25</div>
+                    <div class="calendar-day">26</div>
+                    <div class="calendar-day">27</div>
+                    <div class="calendar-day">28</div>
+                    <div class="calendar-day">29</div>
+                    <div class="calendar-day">30</div>
+                </div>
+            </div>
+
+            <div class="period-history-card">
+                <h3>历史记录</h3>
+                <p class="empty-tip">还没有记录，标记本次经期开始后会显示在这里</p>
+            </div>
+
+            <div class="period-stat-card">
+                <div class="stat-card-header">
+                    <h3>统计</h3>
+                    <button class="btn-month-report">月度报告</button>
+                </div>
+                <p>继续记录几次经期后，这里会有周期洞察。</p>
+                <p class="small-text">暂无症状记录（长按日格可录入）</p>
+            </div>
+
+            <div class="period-relieve-card">
+                <h3>症状缓解建议</h3>
+                <p>记录症状后，这里会给针对性缓解建议。</p>
+            </div>
+
+            <div class="period-tips-card">
+                <h3>健康小贴士</h3>
+                <p>连续记录几次经期后，我可以帮你预测周期和排卵窗口。</p>
+                <p class="tips-footer">梦角 · 从今天开始记一点点，好吗？</p>
+            </div>
+
+                        <!-- 经期提醒设置弹窗 -->
+            <div class="popup popup-period-notify">
+                <div class="popup-box period-notify-box">
+                    <h3>经期提醒</h3>
+                    <div class="setting-switch-row">
+                        <label>开启提醒</label>
+                        <input type="checkbox" class="switch-toggle" checked>
+                    </div>
+                    <div class="setting-input-row">
+                        <label>提前几天提醒</label>
+                        <input type="number" value="2" min="0" max="7">
+                        <span>天</span>
+                    </div>
+                    <div class="setting-switch-row">
+                        <label>经期结束提醒</label>
+                        <input type="checkbox" class="switch-toggle">
+                    </div>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-close">关闭</button>
+                        <button class="btn-popup-save">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 经期周期设置弹窗 -->
+            <div class="popup popup-period-setting">
+                <div class="popup-box period-setting-box">
+                    <h3>经期设置</h3>
+                    <div class="setting-input-row">
+                        <label>平均周期长度</label>
+                        <input type="number" value="28" min="21" max="35">
+                        <span>天</span>
+                    </div>
+                    <div class="setting-input-row">
+                        <label>经期持续天数</label>
+                        <input type="number" value="5" min="2" max="10">
+                        <span>天</span>
+                    </div>
+                    <div class="setting-input-row">
+                        <label>排卵期长度</label>
+                        <input type="number" value="5" min="3" max="7">
+                        <span>天</span>
+                    </div>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-close">关闭</button>
+                        <button class="btn-popup-save">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预留经期页面扩展位 -->
+            <div class="space-for-future period-future-1"></div>
+            <div class="space-for-future period-future-2"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第19页：消息记录页面 -->
+        <!-- ============================================== -->
+        <div class="page page-message-record" data-page="messageRecordPage">
+            <header class="page-sub-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">消息记录</h2>
+            </header>
+
+            <div class="msg-count-row">
+                <div class="count-card">
+                    <p>我发送</p>
+                    <span class="count-number">0</span>
+                </div>
+                <div class="count-card">
+                    <p>TA 发送</p>
+                    <span class="count-number">0</span>
+                </div>
+            </div>
+
+            <div class="word-cloud-card">
+                <h3>我的高频词 TOP 5</h3>
+                <p class="empty-tip">暂无数据</p>
+            </div>
+
+            <div class="word-cloud-card">
+                <h3>TA 的高频词 TOP 5</h3>
+                <p class="empty-tip">暂无数据</p>
+            </div>
+
+            <div class="recent-7-card">
+                <h3>最近 7 天</h3>
+                <p class="empty-tip">暂无数据</p>
+            </div>
+
+            <!-- 预留消息记录扩展位 -->
+            <div class="space-for-future msg-record-future"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第20页：占卜页面 -->
+        <!-- ============================================== -->
+        <div class="page page-divination" data-page="divinationPage">
+            <header class="page-sub-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">占卜</h2>
+            </header>
+
+            <div class="divination-type-row">
+                <div class="divination-card active">
+                    <span class="divination-icon">🔮</span>
+                    <h3>塔罗牌</h3>
+                    <p>78 张 · 正逆位</p>
+                </div>
+                <div class="divination-card">
+                    <span class="divination-icon">🌙</span>
+                    <h3>雷诺曼</h3>
+                    <p>36 张</p>
+                </div>
+            </div>
+
+            <p class="ask-label">你想问什么？</p>
+            <input type="text" class="ask-input" placeholder="输入你的问题...">
+
+            <p class="card-count-label">选择牌数</p>
+            <div class="card-count-btn-row">
+                <button class="card-count-btn active">1 张</button>
+                <button class="card-count-btn">3 张</button>
+                <button class="card-count-btn">7 张</button>
+            </div>
+
+            <button class="btn-start-divination">开始占卜</button>
+            <p class="divination-tip">每次占卜都会重新洗牌打乱，结果随机。</p>
+
+            <!-- 预留占卜扩展位 -->
+            <div class="space-for-future divination-future"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第21页：收藏页面（右上角加号去掉，保留多选删除） -->
+        <!-- ============================================== -->
+        <div class="page page-favorite" data-page="favoritePage">
+            <header class="page-sub-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">收藏</h2>
+                <!-- 右上角加号去掉，只保留多选 -->
+                <button class="btn-multi-select">多选</button>
+            </header>
+
+            <div class="favorite-tab-row">
+                <button class="favorite-tab-btn active">我的收藏</button>
+                <button class="favorite-tab-btn">TA 的收藏</button>
+            </div>
+
+            <div class="favorite-list-container">
+                <p class="empty-tip">还没有收藏</p>
+            </div>
+
+            <!-- 多选模式下的底部删除按钮 -->
+            <div class="multi-select-footer">
+                <button class="btn-delete-selected">删除选中</button>
+                <button class="btn-cancel-multi">取消</button>
+            </div>
+
+            <!-- 预留收藏扩展位 -->
+            <div class="space-for-future favorite-future"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第22页：主页第二页（翻动的） -->
+        <!-- ============================================== -->
+        <div class="page page-home-second" data-page="homeSecond">
+            <div class="music-player-card">
+                <div class="player-left-info">
+                    <div class="music-icon-box"></div>
+                    <div class="player-text">
+                        <h3>未在播放</h3>
+                        <p>选择一首歌开始</p>
+                    </div>
+                </div>
+                <div class="player-time-row">
+                    <span>00:00</span>
+                    <div class="player-progress-bar"></div>
+                    <span>00:00</span>
+                </div>
+                <div class="player-control-row">
+                    <button class="btn-player-prev">‹</button>
+                    <button class="btn-player-play">▶</button>
+                    <button class="btn-player-next">›</button>
+                </div>
+            </div>
+
+            <div class="home-second-function-grid">
+                <div class="func-item" data-target-page="musicPage">
+                    <div class="func-icon icon-music-line"></div>
+                    <span class="func-name">音乐</span>
+                </div>
+                <div class="func-item" data-target-page="letterPage">
+                    <div class="func-icon icon-letter-line"></div>
+                    <span class="func-name">信件</span>
+                </div>
+                <div class="func-item" data-target-page="questionPage">
+                    <div class="func-icon icon-question-line"></div>
+                    <span class="func-name">提问</span>
+                </div>
+                <div class="func-item" data-target-page="divinationPage">
+                    <div class="func-icon icon-star-line"></div>
+                    <span class="func-name">占卜</span>
+                </div>
+                <div class="func-item" data-target-page="settingPage">
+                    <div class="func-icon icon-setting-line"></div>
+                    <span class="func-name">设置</span>
+                </div>
+                <div class="func-item" data-target-page="waterPage">
+                    <div class="func-icon icon-water-line"></div>
+                    <span class="func-name">喝水</span>
+                </div>
+            </div>
+
+            <div class="period-preview-card">
+                <h3>经期</h3>
+                <p>未记录</p>
+            </div>
+
+            <div class="home-second-two-col">
+                <div class="memo-preview-card">
+                    <h3>今日备忘</h3>
+                    <p>点这里记一句话</p>
+                </div>
+                <div class="mood-preview-card">
+                    <h3>今天的心情</h3>
+                    <p>点一下选心情</p>
+                </div>
+            </div>
+
+            <!-- 首页翻页提示 -->
+            <div class="home-page-indicator">
+                <span class="indicator-dot"></span>
+                <span class="indicator-dot active"></span>
+            </div>
+
+            <!-- 预留首页第二页扩展位 -->
+            <div class="space-for-future home-second-future-1"></div>
+            <div class="space-for-future home-second-future-2"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第23页：音乐页面（右上角加号添加音乐，灰色链接示例，支持歌单） -->
+        <!-- ============================================== -->
+        <div class="page page-music" data-page="musicPage">
+            <header class="page-sub-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">音乐</h2>
+                <div class="music-header-right">
+                    <button class="btn-batch-manage">批量管理</button>
+                    <!-- 右上角加号：添加音乐 -->
+                    <button class="btn-add-music">+</button>
+                </div>
+            </header>
+
+            <div class="music-tab-row">
+                <button class="music-tab-btn active">我的音乐库</button>
+                <button class="music-tab-btn">我的收藏</button>
+                <button class="music-tab-btn">TA 的收藏</button>
+            </div>
+
+            <div class="music-list-container">
+                <p class="empty-tip">还没有音乐</p>
+            </div>
+
+            <div class="playlist-area">
+                <div class="playlist-header">
+                    <h3>我的歌单</h3>
+                    <button class="btn-manage-playlist">管理</button>
+                </div>
+                <div class="playlist-list">
+                    <p class="empty-tip">暂无歌单</p>
+                </div>
+            </div>
+
+            <!-- 添加音乐弹窗 -->
+            <div class="popup popup-add-music">
+                <div class="popup-box add-music-box">
+                    <div class="popup-head">
+                        <h3>添加音乐</h3>
+                        <!-- 有底部取消按钮，不写× -->
+                    </div>
+                    <!-- 灰色示例链接 -->
+                    <input type="text" class="music-link-input" placeholder="粘贴歌曲链接，示例：https://xxx.music.com/song/123456">
+                    <div class="add-to-playlist-row">
+                        <p>加入歌单：</p>
+                        <select class="playlist-select">
+                            <option value="new">新建歌单</option>
+                        </select>
+                    </div>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-cancel">取消</button>
+                        <button class="btn-popup-confirm">添加</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 歌单管理弹窗 -->
+            <div class="popup popup-manage-playlist">
+                <div class="popup-box playlist-box">
+                    <h3>歌单管理</h3>
+                    <div class="playlist-manage-list">
+                        <p class="empty-tip">暂无歌单</p>
+                    </div>
+                    <button class="btn-new-playlist">新建歌单</button>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-close">关闭</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 梦角邀请一起听歌弹窗（15%概率后台触发，页面不显示概率） -->
+            <div class="popup popup-listen-together">
+                <div class="popup-box listen-together-box">
+                    <h3>梦角邀请你一起听歌</h3>
+                    <p class="listen-desc">TA 发现了一首很适合你们的歌，邀请你一起听，是否接受？</p>
+                    <div class="popup-btn-row">
+                        <!-- 等一会和同意按钮 -->
+                        <button class="btn-listen-later">等一会</button>
+                        <button class="btn-listen-accept">同意</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预留音乐页面扩展位 -->
+            <div class="space-for-future music-future-1"></div>
+            <div class="space-for-future music-future-2"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第24页：提问页面（最少1题，无上限，支持单选多选） -->
+        <!-- ============================================== -->
+        <div class="page page-question" data-page="questionPage">
+            <header class="page-sub-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">提问</h2>
+                <button class="btn-add-question">+</button>
+            </header>
+
+            <div class="question-tab-row">
+                <button class="question-tab-btn active">我的提问</button>
+                <button class="question-tab-btn">TA 的提问</button>
+            </div>
+
+            <div class="question-list-container">
+                <p class="empty-tip">还没有提问</p>
+            </div>
+
+            <p class="question-desc">一次提问可以包含至少 1 个问题，数量不限，支持单选题和多选题。</p>
+
+            <!-- 新建提问弹窗 -->
+            <div class="popup popup-new-question">
+                <div class="popup-box new-question-box">
+                    <div class="popup-head">
+                        <h3>新建提问</h3>
+                        <!-- 有底部取消按钮，不写× -->
+                    </div>
+                    <div class="question-type-row">
+                        <label><input type="radio" name="questionType" value="single" checked> 单选题</label>
+                        <label><input type="radio" name="questionType" value="multi"> 多选题</label>
+                    </div>
+                    <textarea class="question-content-input" placeholder="输入问题内容"></textarea>
+                    <div class="question-option-list">
+                        <div class="option-item">
+                            <input type="text" placeholder="选项1">
+                        </div>
+                        <div class="option-item">
+                            <input type="text" placeholder="选项2">
+                        </div>
+                    </div>
+                    <button class="btn-add-option">+ 增加选项</button>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-cancel">取消</button>
+                        <button class="btn-popup-confirm">提交</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预留提问页面扩展位 -->
+            <div class="space-for-future question-future-1"></div>
+            <div class="space-for-future question-future-2"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第25页：喝水量页面（所有功能保留） -->
+        <!-- ============================================== -->
+        <div class="page page-water" data-page="waterPage">
+            <header class="page-sub-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">喝水</h2>
+            </header>
+
+            <div class="water-top-card">
+                <span class="water-count-number">0</span>
+                <p class="water-count-desc">0 杯 · 0 ml / 8 杯 · 2000 ml</p>
+                <div class="water-progress-track">
+                    <div class="water-progress-fill"></div>
+                    <div class="water-cup-mark-row">
+                        <div class="cup-mark"></div>
+                        <div class="cup-mark"></div>
+                        <div class="cup-mark"></div>
+                        <div class="cup-mark"></div>
+                        <div class="cup-mark"></div>
+                        <div class="cup-mark"></div>
+                        <div class="cup-mark"></div>
+                        <div class="cup-mark"></div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="water-week-label">近 7 天</p>
+            <div class="water-week-bar-row">
+                <div class="week-day-item">
+                    <p>10</p>
+                    <div class="week-day-bar"></div>
+                </div>
+                <div class="week-day-item">
+                    <p>11</p>
+                    <div class="week-day-bar"></div>
+                </div>
+                <div class="week-day-item">
+                    <p>12</p>
+                    <div class="week-day-bar"></div>
+                </div>
+                <div class="week-day-item">
+                    <p>13</p>
+                    <div class="week-day-bar"></div>
+                </div>
+                <div class="week-day-item">
+                    <p>14</p>
+                    <div class="week-day-bar"></div>
+                </div>
+                <div class="week-day-item">
+                    <p>15</p>
+                    <div class="week-day-bar"></div>
+                </div>
+                <div class="week-day-item active">
+                    <p>16</p>
+                    <div class="week-day-bar"></div>
+                </div>
+            </div>
+
+            <div class="water-count-btn-row">
+                <button class="btn-water-minus">-1</button>
+                <button class="btn-water-plus">+1</button>
+            </div>
+
+            <div class="water-word-card-preview">"别忘了喝水"</div>
+
+            <div class="water-send-btn-row">
+                <button class="btn-send-to-chat">发到聊天</button>
+                <button class="btn-ta-remind">TA 提醒</button>
+            </div>
+
+            <div class="water-bottom-func-row">
+                <button class="btn-set-water-goal">设目标</button>
+                <button class="btn-set-once-volume">单次量</button>
+                <button class="btn-add-water-wordcard">+ 提醒字卡</button>
+            </div>
+
+            <!-- 设置喝水目标弹窗 -->
+            <div class="popup popup-set-water-goal">
+                <div class="popup-box">
+                    <h3>设置喝水目标</h3>
+                    <div class="form-item">
+                        <label>每日目标杯数</label>
+                        <input type="number" value="8">
+                    </div>
+                    <div class="form-item">
+                        <label>每杯毫升数</label>
+                        <input type="number" value="250">
+                    </div>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-cancel">取消</button>
+                        <button class="btn-popup-confirm">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设置单次水量弹窗 -->
+            <div class="popup popup-set-once-volume">
+                <div class="popup-box">
+                    <h3>设置单次水量</h3>
+                    <div class="form-item">
+                        <label>单次增加毫升</label>
+                        <input type="number" value="250">
+                    </div>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-cancel">取消</button>
+                        <button class="btn-popup-confirm">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 添加喝水提醒字卡弹窗 -->
+            <div class="popup popup-add-water-wordcard">
+                <div class="popup-box">
+                    <h3>新增提醒字卡</h3>
+                    <input type="text" placeholder="输入提醒文字">
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-cancel">取消</button>
+                        <button class="btn-popup-confirm">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预留喝水页面扩展位 -->
+            <div class="space-for-future water-future-1"></div>
+            <div class="space-for-future water-future-2"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 第26页：设置主页面 + 所有设置弹窗 -->
+        <!-- ============================================== -->
+        <div class="page page-setting" data-page="settingPage">
+            <header class="page-sub-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">设置</h2>
+            </header>
+
+            <div class="setting-group">
+                <div class="setting-item" data-target-popup="wordcardLibPopup">
+                    <span>字卡</span>
+                    <span class="arrow-right">›</span>
+                </div>
+                <div class="setting-item" data-target-popup="replySettingPopup">
+                    <span>回复</span>
+                    <span class="arrow-right">›</span>
+                </div>
+                <div class="setting-item" data-target-popup="letterSettingPopup">
+                    <span>信件</span>
+                    <span class="arrow-right">›</span>
+                </div>
+                <div class="setting-item" data-target-popup="momentsSettingPopup">
+                    <span>朋友圈</span>
+                    <span class="arrow-right">›</span>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <div class="setting-item" data-target-popup="darkModePopup">
+                    <span>深色模式</span>
+                    <span class="arrow-right">›</span>
+                </div>
+                <div class="setting-item" data-target-popup="notifySettingPopup">
+                    <span>后台通知</span>
+                    <span class="arrow-right">›</span>
+                </div>
+                 <div class="setting-item" data-target-popup="chatSendSettingPopup">
+                    <span>发送方式</span>
+                    <span class="arrow-right">›</span>
+                 </div>
+            </div>
+
+            <div class="setting-group">
+                <div class="setting-item" data-target-popup="dataSettingPopup">
+                    <span>数据</span>
+                    <span class="arrow-right">›</span>
+                </div>
+                <div class="setting-item" data-target-popup="storageSettingPopup">
+                    <span>存储</span>
+                    <span class="arrow-right">›</span>
+                </div>
+            </div>
+
+            <!-- 设置弹窗1：字卡库 -->
+            <div class="popup popup-wordcard-lib">
+                <div class="popup-box wordcard-lib-box">
+                    <div class="popup-head">
+                        <h3>字卡库</h3>
+                        <!-- 有底部关闭按钮，不写× -->
+                    </div>
+                    <div class="wordcard-tab-row">
+                        <button class="wordcard-tab-btn active">主字卡</button>
+                        <button class="wordcard-tab-btn">颜文字</button>
+                        <button class="wordcard-tab-btn">Emoji</button>
+                        <button class="wordcard-tab-btn">表情库</button>
+                        <button class="wordcard-tab-btn">语音</button>
+                    </div>
+                    <div class="wordcard-tool-row">
+                        <button class="wordcard-tool-btn">🔍</button>
+                        <button class="wordcard-tool-btn">📁</button>
+                        <button class="wordcard-tool-btn">⬜</button>
+                        <button class="wordcard-tool-btn">⬇</button>
+                        <button class="wordcard-tool-btn">⬆</button>
+                    </div>
+                    <div class="wordcard-list">
+                        <p class="empty-tip">列表空空如也<br>暂无内容</p>
+                    </div>
+                    <div class="popup-btn-row">
+                        <button class="btn-add-wordcard">+ 新增</button>
+                        <button class="btn-popup-close">关闭</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设置弹窗2：回复设置 -->
+            <div class="popup popup-reply-setting">
+                <div class="popup-box reply-setting-box">
+                    <div class="popup-head">
+                        <h3>回复</h3>
+                        <!-- 有底部关闭保存按钮，不写× -->
+                    </div>
+                    <div class="setting-input-row">
+                        <label>回复速度最短</label>
+                        <input type="number" value="1">
+                        <span>秒</span>
+                    </div>
+                    <div class="setting-input-row">
+                        <label>回复速度最长</label>
+                        <input type="number" value="10">
+                        <span>秒</span>
+                    </div>
+                    <div class="setting-input-row">
+                        <label>回复条数最少</label>
+                        <input type="number" value="1">
+                        <span>条</span>
+                    </div>
+                    <div class="setting-input-row">
+                        <label>回复条数最多</label>
+                        <input type="number" value="3">
+                        <span>条</span>
+                    </div>
+                    <!-- 拼字卡开关，后台概率50%，页面不显示概率 -->
+                    <div class="setting-switch-row">
+                        <label>拼字卡</label>
+                        <input type="checkbox" class="switch-toggle">
+                    </div>
+                    <!-- 已读不回开关，后台概率50%，页面不显示概率 -->
+                    <div class="setting-switch-row">
+                        <label>已读不回</label>
+                        <input type="checkbox" class="switch-toggle">
+                    </div>
+                    <div class="setting-switch-row">
+                        <label>TA 主动发信息</label>
+                        <input type="checkbox" class="switch-toggle">
+                    </div>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-close">关闭</button>
+                        <button class="btn-popup-save">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设置弹窗3：信件设置 -->
+            <div class="popup popup-letter-setting">
+                <div class="popup-box letter-setting-box">
+                    <div class="popup-head">
+                        <h3>信件</h3>
+                        <!-- 有底部关闭按钮，不写× -->
+                    </div>
+                    <div class="setting-input-row">
+                        <label>写信时间最短</label>
+                        <input type="number" value="5">
+                        <span>秒</span>
+                    </div>
+                    <div class="setting-input-row">
+                        <label>写信时间最长</label>
+                        <input type="number" value="30">
+                        <span>秒</span>
+                    </div>
+                    <div class="setting-input-row">
+                        <label>写信最少使用字卡</label>
+                        <input type="number" value="1">
+                        <span>张</span>
+                    </div>
+                    <div class="setting-input-row">
+                        <label>写信最多使用字卡</label>
+                        <input type="number" value="5">
+                        <span>张</span>
+                    </div>
+                    <!-- 梦角写信概率65%，后台逻辑，页面不显示 -->
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-close">关闭</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设置弹窗4：朋友圈设置 -->
+            <div class="popup popup-moments-setting">
+                <div class="popup-box moments-setting-box">
+                    <div class="popup-head">
+                        <h3>朋友圈</h3>
+                        <!-- 有底部关闭保存按钮，不写× -->
+                    </div>
+                    <div class="setting-input-row">
+                        <label>发朋友圈时间最短</label>
+                        <input type="number" value="30">
+                        <span>秒</span>
+                    </div>
+                    <div class="setting-input-row">
+                        <label>发朋友圈时间最长</label>
+                        <input type="number" value="120">
+                        <span>秒</span>
+                    </div>
+                    <div class="setting-input-row">
+                        <label>发朋友圈最少使用字卡</label>
+                        <input type="number" value="1">
+                        <span>张</span>
+                    </div>
+                    <div class="setting-input-row">
+                        <label>发朋友圈最多使用字卡</label>
+                        <input type="number" value="3">
+                        <span>张</span>
+                    </div>
+                    <!-- 朋友圈让全部梦角看见，后台概率100%，页面不显示 -->
+                    <div class="setting-switch-row">
+                        <label>朋友圈让全部梦角看见</label>
+                        <input type="checkbox" class="switch-toggle" checked>
+                    </div>
+                    <!-- 允许TA们看见对方评论，后台吵架吃醋概率100%，页面不显示 -->
+                    <div class="setting-switch-row">
+                        <label>允许 TA 们看见对方评论</label>
+                        <input type="checkbox" class="switch-toggle" checked>
+                    </div>
+                    <!-- 梦角发朋友圈概率100%，在最短最长时间随机，后台逻辑，页面不显示 -->
+                    <!-- 梦角点赞评论用户朋友圈概率50%，后台逻辑，页面不显示 -->
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-close">关闭</button>
+                        <button class="btn-popup-save">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设置弹窗5：深色模式 -->
+            <div class="popup popup-dark-mode">
+                <div class="popup-box dark-mode-box">
+                    <h3>深色模式</h3>
+                    <div class="radio-row">
+                        <label><input type="radio" name="darkMode" checked> 跟随系统</label>
+                    </div>
+                    <div class="radio-row">
+                        <label><input type="radio" name="darkMode"> 黑色</label>
+                    </div>
+                    <div class="radio-row">
+                        <label><input type="radio" name="darkMode"> 白色</label>
+                    </div>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-close">关闭</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设置弹窗6：后台通知 -->
+            <div class="popup popup-notify-setting">
+                <div class="popup-box notify-setting-box">
+                    <h3>后台通知</h3>
+                    <div class="setting-switch-row">
+                        <label>后台通知</label>
+                        <input type="checkbox" class="switch-toggle">
+                    </div>
+                    <div class="setting-switch-row">
+                        <label>后台保活</label>
+                        <input type="checkbox" class="switch-toggle">
+                    </div>
+                    <button class="btn-test-notify">测试</button>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-close">关闭</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设置弹窗7：数据 -->
+            <div class="popup popup-data-setting">
+                <div class="popup-box data-setting-box">
+                    <h3>数据</h3>
+                    <button class="popup-option-btn">导入数据</button>
+                    <button class="popup-option-btn">导出数据</button>
+                    <button class="popup-option-btn danger">清除数据</button>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-close">关闭</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设置弹窗8：存储 -->
+            <div class="popup popup-storage-setting">
+                <div class="popup-box storage-setting-box">
+                    <h3>存储</h3>
+                    <div class="storage-row">
+                        <span>聊天记录</span>
+                        <span>390 B</span>
+                    </div>
+                    <div class="storage-row">
+                        <span>字卡</span>
+                        <span>170 B</span>
+                    </div>
+                    <div class="storage-row">
+                        <span>收藏</span>
+                        <span>4 B</span>
+                    </div>
+                    <div class="storage-row">
+                        <span>朋友圈</span>
+                        <span>2 B</span>
+                    </div>
+                    <div class="storage-row">
+                        <span>表情包</span>
+                        <span>4 B</span>
+                    </div>
+                    <div class="storage-row">
+                        <span>信件</span>
+                        <span>2 B</span>
+                    </div>
+                    <div class="storage-row">
+                        <span>纪念日</span>
+                        <span>2 B</span>
+                    </div>
+                    <div class="storage-row">
+                        <span>占卜记录</span>
+                        <span>2 B</span>
+                    </div>
+                    <div class="storage-row">
+                        <span>音乐</span>
+                        <span>2 B</span>
+                    </div>
+                    <div class="storage-row">
+                        <span>提问</span>
+                        <span>4 B</span>
+                    </div>
+                    <div class="storage-row">
+                        <span>经期记录</span>
+                        <span>39 B</span>
+                    </div>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-close">关闭</button>
+                    </div>
+                </div>
+            </div>
+            <!-- 设置弹窗9：发送方式 -->
+            <div class="popup popup-chat-send-setting">
+                <div class="popup-box chat-send-setting-box">
+                    <h3>发送方式</h3>
+                    <div class="radio-row">
+                        <label><input type="radio" name="chatSendMode" value="both" checked> 回车和按钮都可以发送</label>
+                    </div>
+                    <div class="radio-row">
+                        <label><input type="radio" name="chatSendMode" value="enter"> 只用回车发送</label>
+                    </div>
+                    <div class="radio-row">
+                        <label><input type="radio" name="chatSendMode" value="button"> 只用按钮发送</label>
+                    </div>
+                    <div class="popup-btn-row">
+                        <button class="btn-popup-close">关闭</button>
+                        <button class="btn-popup-save">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预留设置页面扩展位 -->
+            <div class="space-for-future setting-future-1"></div>
+            <div class="space-for-future setting-future-2"></div>
+            <div class="space-for-future setting-future-3"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 【新增】第27页：商城页面（推荐/外卖Tab，商品卡片，余额，许愿按钮） -->
+        <!-- ============================================== -->
+        <div class="page page-shop" data-page="shopPage">
+            <header class="page-sub-header shop-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">商城</h2>
+                <div class="shop-balance-wrap">
+                    <span class="balance-icon">📋</span>
+                    <input type="number" class="balance-input" value="520.00">
+                    <span class="balance-text">元</span>
+                </div>
+            </header>
+
+            <div class="shop-search-row">
+                <input type="text" class="shop-search-input" placeholder="搜索商品...">
+                <button class="btn-wish-product">许愿</button>
+            </div>
+
+            <div class="shop-tab-row">
+                <button class="shop-tab-btn active" data-shop-tab="recommend">推荐</button>
+                <button class="shop-tab-btn" data-shop-tab="takeaway">外卖</button>
+            </div>
+
+            <button class="btn-shop-all">> 全部</button>
+
+            <!-- Tab内容：推荐tab（衣物类商品） -->
+            <div class="shop-tab-content tab-recommend active">
+                <div class="shop-goods-grid">
+                    <div class="goods-item">
+                        <div class="goods-img-box">👔</div>
+                        <h3 class="goods-name">纯棉白衬衫</h3>
+                        <p class="goods-desc">100%新疆长绒棉, 亲肤透气, 商务休闲两相宜</p>
+                        <div class="goods-tag-row">
+                            <span class="goods-tag">衣物</span>
+                            <span class="goods-tag">新品</span>
+                        </div>
+                        <div class="goods-bottom-row">
+                            <span class="goods-price">¥129</span>
+                            <button class="btn-add-cart">+</button>
+                        </div>
+                    </div>
+                    <div class="goods-item">
+                        <div class="goods-img-box">🧥</div>
+                        <h3 class="goods-name">连帽卫衣</h3>
+                        <p class="goods-desc">加绒加厚, 宽松版型, 秋冬必备。情侣款可配对穿</p>
+                        <div class="goods-tag-row">
+                            <span class="goods-tag">衣物</span>
+                            <span class="goods-tag">热销</span>
+                        </div>
+                        <div class="goods-bottom-row">
+                            <span class="goods-price">¥169</span>
+                            <button class="btn-add-cart">+</button>
+                        </div>
+                    </div>
+                    <div class="goods-item">
+                        <div class="goods-img-box">👗</div>
+                        <h3 class="goods-name">真丝睡裙</h3>
+                        <p class="goods-desc">100%桑蚕丝, 亲肤丝滑, 蕾丝拼接设计</p>
+                        <div class="goods-tag-row">
+                            <span class="goods-tag">衣物</span>
+                            <span class="goods-tag">性感</span>
+                        </div>
+                        <div class="goods-bottom-row">
+                            <span class="goods-price">¥259</span>
+                            <button class="btn-add-cart">+</button>
+                        </div>
+                    </div>
+                    <div class="goods-item">
+                        <div class="goods-img-box">🩴</div>
+                        <h3 class="goods-name">情侣拖鞋</h3>
+                        <p class="goods-desc">EVA材质, 防滑耐磨, 可定制刺绣</p>
+                        <div class="goods-tag-row">
+                            <span class="goods-tag">衣物</span>
+                            <span class="goods-tag">情侣</span>
+                        </div>
+                        <div class="goods-bottom-row">
+                            <span class="goods-price">¥49</span>
+                            <button class="btn-add-cart">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab内容：外卖tab（奶茶饮品商品） -->
+            <div class="shop-tab-content tab-takeaway">
+                <div class="shop-goods-grid">
+                    <div class="goods-item">
+                        <div class="goods-img-box">🧋</div>
+                        <h3 class="goods-name">芋泥波波奶茶</h3>
+                        <p class="goods-desc">手工芋泥+黑糖珍珠, 大杯700ml</p>
+                        <div class="goods-tag-row">
+                            <span class="goods-tag">奶茶</span>
+                            <span class="goods-tag">人气</span>
+                        </div>
+                        <div class="goods-bottom-row">
+                            <span class="goods-price">¥18</span>
+                            <button class="btn-add-cart">+</button>
+                        </div>
+                    </div>
+                    <div class="goods-item">
+                        <div class="goods-img-box">🥭</div>
+                        <h3 class="goods-name">杨枝甘露</h3>
+                        <p class="goods-desc">新鲜芒果+西柚+椰浆, 清爽解腻</p>
+                        <div class="goods-tag-row">
+                            <span class="goods-tag">奶茶</span>
+                            <span class="goods-tag">新品</span>
+                        </div>
+                        <div class="goods-bottom-row">
+                            <span class="goods-price">¥22</span>
+                            <button class="btn-add-cart">+</button>
+                        </div>
+                    </div>
+                    <div class="goods-item">
+                        <div class="goods-img-box">☕</div>
+                        <h3 class="goods-name">生椰拿铁</h3>
+                        <p class="goods-desc">现萃咖啡+厚椰乳, 丝滑香浓</p>
+                        <div class="goods-tag-row">
+                            <span class="goods-tag">奶茶</span>
+                            <span class="goods-tag">热销</span>
+                        </div>
+                        <div class="goods-bottom-row">
+                            <span class="goods-price">¥20</span>
+                            <button class="btn-add-cart">+</button>
+                        </div>
+                    </div>
+                    <div class="goods-item">
+                        <div class="goods-img-box">🍋</div>
+                        <h3 class="goods-name">百香果柠檬茶</h3>
+                        <p class="goods-desc">新鲜百香果+手捣柠檬, 酸甜开胃</p>
+                        <div class="goods-tag-row">
+                            <span class="goods-tag">奶茶</span>
+                            <span class="goods-tag">清爽</span>
+                        </div>
+                        <div class="goods-bottom-row">
+                            <span class="goods-price">¥16</span>
+                            <button class="btn-add-cart">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 商城底部导航 -->
+            <div class="shop-bottom-nav">
+                <div class="shop-nav-item active" data-target-page="shopPage">
+                    <div class="shop-nav-icon">🏪</div>
+                    <span>商城</span>
+                </div>
+                <div class="shop-nav-item" data-target-page="cartPage">
+                    <div class="shop-nav-icon">🛒</div>
+                    <span>购物车</span>
+                </div>
+                <div class="shop-nav-item" data-target-page="orderPage">
+                    <div class="shop-nav-icon">📋</div>
+                    <span>订单</span>
+                </div>
+            </div>
+
+            <!-- 许愿弹窗，点击右上角许愿按钮打开，用来自定义新增商品 -->
+            <div class="popup popup-wish-goods">
+                <div class="popup-box wish-goods-box">
+                    <button class="btn-popup-close wish-close-btn">×</button>
+                    <h3>许愿</h3>
+                    <div class="form-item">
+                        <label>商品名称</label>
+                        <input type="text" class="wish-name-input" placeholder="输入商品名称...">
+                    </div>
+                    <div class="form-item">
+                        <label>价格 (¥)</label>
+                        <input type="number" class="wish-price-input" value="0.00" step="0.01">
+                    </div>
+                    <div class="form-item">
+                        <label>分类</label>
+                        <select class="wish-category-select">
+                            <option value="recommend">推荐</option>
+                            <option value="takeaway">外卖</option>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label>小标签（用逗号分隔）</label>
+                        <input type="text" class="wish-tag-input" placeholder="如: 衣物, 新品, 限量">
+                    </div>
+                    <div class="form-item">
+                        <label>商品图标</label>
+                        <div class="wish-icon-row">
+                            <input type="text" class="wish-emoji-input" placeholder="输入emoji 如: 👔 🧋 🎁">
+                            <span>或</span>
+                            <button class="btn-upload-icon">📷 上传图片</button>
+                        </div>
+                    </div>
+                    <div class="form-item">
+                        <label>商品描述</label>
+                        <textarea class="wish-desc-input" placeholder="输入商品详细描述..."></textarea>
+                    </div>
+                    <div class="form-item">
+                        <label>规格选项</label>
+                        <div class="spec-wrap">
+                            <button class="btn-add-spec">+ 添加规格</button>
+                        </div>
+                    </div>
+                    <button class="btn-wish-submit">许愿上架</button>
+                </div>
+            </div>
+
+            <!-- 商城页面预留扩展位 -->
+            <div class="space-for-future shop-future-1"></div>
+            <div class="space-for-future shop-future-2"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 【新增】第28页：购物车页面 -->
+        <!-- ============================================== -->
+        <div class="page page-cart" data-page="cartPage">
+            <header class="page-sub-header cart-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">购物车</h2>
+                <div class="shop-balance-wrap">
+                    <span class="balance-icon">📋</span>
+                    <input type="number" class="balance-input" value="520.00">
+                    <span class="balance-text">元</span>
+                </div>
+            </header>
+
+            <div class="cart-empty-wrap">
+                <p class="cart-empty-text">购物车是空的</p>
+            </div>
+
+            <!-- 购物车商品列表，js动态渲染 -->
+            <div class="cart-list-wrap"></div>
+
+            <div class="cart-bottom-bar">
+                <label class="cart-check-all">
+                    <input type="checkbox" class="cart-checkbox-all">
+                    <span>全选</span>
+                </label>
+                <div class="cart-total-wrap">
+                    <span>合计：¥<span class="cart-total-price">0</span></span>
+                </div>
+                <button class="btn-cart-delete">删除</button>
+                <button class="btn-cart-settle">结算</button>
+            </div>
+
+            <!-- 商城底部导航 -->
+            <div class="shop-bottom-nav">
+                <div class="shop-nav-item" data-target-page="shopPage">
+                    <div class="shop-nav-icon">🏪</div>
+                    <span>商城</span>
+                </div>
+                <div class="shop-nav-item active" data-target-page="cartPage">
+                    <div class="shop-nav-icon">🛒</div>
+                    <span>购物车</span>
+                </div>
+                <div class="shop-nav-item" data-target-page="orderPage">
+                    <div class="shop-nav-icon">📋</div>
+                    <span>订单</span>
+                </div>
+            </div>
+
+            <!-- 购物车页面预留扩展位 -->
+            <div class="space-for-future cart-future-1"></div>
+            <div class="space-for-future cart-future-2"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 【新增】第29页：我的订单页面 -->
+        <!-- ============================================== -->
+        <div class="page page-order" data-page="orderPage">
+            <header class="page-sub-header order-header">
+                <button class="btn-back">←</button>
+                <h2 class="sub-page-title">我的订单</h2>
+                <div class="shop-balance-wrap">
+                    <span class="balance-icon">📋</span>
+                    <input type="number" class="balance-input" value="520.00">
+                    <span class="balance-text">元</span>
+                </div>
+            </header>
+
+            <div class="order-tab-row">
+                <button class="order-tab-btn active">全部</button>
+                <button class="order-tab-btn">待送达</button>
+                <button class="order-tab-btn">已完成</button>
+                <button class="order-tab-btn">已取消</button>
+            </div>
+
+            <div class="order-empty-wrap">
+                <p class="order-empty-text">暂无订单</p>
+            </div>
+
+            <!-- 订单列表容器，js动态渲染订单卡片 -->
+            <div class="order-list-wrap"></div>
+
+            <!-- 商城底部导航 -->
+            <div class="shop-bottom-nav">
+                <div class="shop-nav-item" data-target-page="shopPage">
+                    <div class="shop-nav-icon">🏪</div>
+                    <span>商城</span>
+                </div>
+                <div class="shop-nav-item" data-target-page="cartPage">
+                    <div class="shop-nav-icon">🛒</div>
+                    <span>购物车</span>
+                </div>
+                <div class="shop-nav-item active" data-target-page="orderPage">
+                    <div class="shop-nav-icon">📋</div>
+                    <span>订单</span>
+                </div>
+            </div>
+
+            <!-- 订单页面预留扩展位 -->
+            <div class="space-for-future order-future-1"></div>
+            <div class="space-for-future order-future-2"></div>
+        </div>
+
+        <!-- 全局预留扩展位，后续新增功能直接加在这里 -->
+        <div class="space-for-future global-future-1"></div>
+        <div class="space-for-future global-future-2"></div>
+        <div class="space-for-future global-future-3"></div>
+        <div class="space-for-future global-future-4"></div>
+        <div class="space-for-future global-future-5"></div>
+        <div class="space-for-future global-future-6"></div>
+        <div class="space-for-future global-future-7"></div>
+        <div class="space-for-future global-future-8"></div>
+        <div class="space-for-future global-future-9"></div>
+        <div class="space-for-future global-future-10"></div>
+        <div class="space-for-future global-future-11"></div>
+        <div class="space-for-future global-future-12"></div>
+        <div class="space-for-future global-future-13"></div>
+        <div class="space-for-future global-future-14"></div>
+        <div class="space-for-future global-future-15"></div>
+        <div class="space-for-future global-future-16"></div>
+        <div class="space-for-future global-future-17"></div>
+        <div class="space-for-future global-future-18"></div>
+        <div class="space-for-future global-future-19"></div>
+        <div class="space-for-future global-future-20"></div>
+        <div class="space-for-future global-future-21"></div>
+        <div class="space-for-future global-future-22"></div>
+        <div class="space-for-future global-future-23"></div>
+        <div class="space-for-future global-future-24"></div>
+        <div class="space-for-future global-future-25"></div>
+        <div class="space-for-future global-future-26"></div>
+        <div class="space-for-future global-future-27"></div>
+        <div class="space-for-future global-future-28"></div>
+        <div class="space-for-future global-future-29"></div>
+        <div class="space-for-future global-future-30"></div>
+        <div class="space-for-future global-future-31"></div>
+        <div class="space-for-future global-future-32"></div>
+        <div class="space-for-future global-future-33"></div>
+        <div class="space-for-future global-future-34"></div>
+        <div class="space-for-future global-future-35"></div>
+        <div class="space-for-future global-future-36"></div>
+        <div class="space-for-future global-future-37"></div>
+        <div class="space-for-future global-future-38"></div>
+        <div class="space-for-future global-future-39"></div>
+        <div class="space-for-future global-future-40"></div>
+        <div class="space-for-future global-future-41"></div>
+        <div class="space-for-future global-future-42"></div>
+        <div class="space-for-future global-future-43"></div>
+        <div class="space-for-future global-future-44"></div>
+        <div class="space-for-future global-future-45"></div>
+        <div class="space-for-future global-future-46"></div>
+        <div class="space-for-future global-future-47"></div>
+        <div class="space-for-future global-future-48"></div>
+        <div class="space-for-future global-future-49"></div>
+        <div class="space-for-future global-future-50"></div>
+        <div class="space-for-future global-future-51"></div>
+        <div class="space-for-future global-future-52"></div>
+        <div class="space-for-future global-future-53"></div>
+        <div class="space-for-future global-future-54"></div>
+        <div class="space-for-future global-future-55"></div>
+        <div class="space-for-future global-future-56"></div>
+        <div class="space-for-future global-future-57"></div>
+        <div class="space-for-future global-future-58"></div>
+        <div class="space-for-future global-future-59"></div>
+        <div class="space-for-future global-future-60"></div>
+        <div class="space-for-future global-future-61"></div>
+        <div class="space-for-future global-future-62"></div>
+        <div class="space-for-future global-future-63"></div>
+        <div class="space-for-future global-future-64"></div>
+        <div class="space-for-future global-future-65"></div>
+        <div class="space-for-future global-future-66"></div>
+        <div class="space-for-future global-future-67"></div>
+        <div class="space-for-future global-future-68"></div>
+        <div class="space-for-future global-future-69"></div>
+        <div class="space-for-future global-future-70"></div>
+        <div class="space-for-future global-future-71"></div>
+        <div class="space-for-future global-future-72"></div>
+        <div class="space-for-future global-future-73"></div>
+        <div class="space-for-future global-future-74"></div>
+        <div class="space-for-future global-future-75"></div>
+        <div class="space-for-future global-future-76"></div>
+        <div class="space-for-future global-future-77"></div>
+        <div class="space-for-future global-future-78"></div>
+        <div class="space-for-future global-future-79"></div>
+        <div class="space-for-future global-future-80"></div>
+        <div class="space-for-future global-future-81"></div>
+        <div class="space-for-future global-future-82"></div>
+        <div class="space-for-future global-future-83"></div>
+        <div class="space-for-future global-future-84"></div>
+        <div class="space-for-future global-future-85"></div>
+        <div class="space-for-future global-future-86"></div>
+        <div class="space-for-future global-future-87"></div>
+        <div class="space-for-future global-future-88"></div>
+        <div class="space-for-future global-future-89"></div>
+        <div class="space-for-future global-future-90"></div>
+        <div class="space-for-future global-future-91"></div>
+        <div class="space-for-future global-future-92"></div>
+        <div class="space-for-future global-future-93"></div>
+        <div class="space-for-future global-future-94"></div>
+        <div class="space-for-future global-future-95"></div>
+        <div class="space-for-future global-future-96"></div>
+        <div class="space-for-future global-future-97"></div>
+        <div class="space-for-future global-future-98"></div>
+        <div class="space-for-future global-future-99"></div>
+        <div class="space-for-future global-future-100"></div>
+        <div class="space-for-future global-future-101"></div>
+        <div class="space-for-future global-future-102"></div>
+        <div class="space-for-future global-future-103"></div>
+        <div class="space-for-future global-future-104"></div>
+        <div class="space-for-future global-future-105"></div>
+        <div class="space-for-future global-future-106"></div>
+        <div class="space-for-future global-future-107"></div>
+        <div class="space-for-future global-future-108"></div>
+        <div class="space-for-future global-future-109"></div>
+        <div class="space-for-future global-future-110"></div>
+        <div class="space-for-future global-future-111"></div>
+        <div class="space-for-future global-future-112"></div>
+        <div class="space-for-future global-future-113"></div>
+        <div class="space-for-future global-future-114"></div>
+        <div class="space-for-future global-future-115"></div>
+        <div class="space-for-future global-future-116"></div>
+        <div class="space-for-future global-future-117"></div>
+        <div class="space-for-future global-future-118"></div>
+        <div class="space-for-future global-future-119"></div>
+        <div class="space-for-future global-future-120"></div>
+        <div class="space-for-future global-future-121"></div>
+        <div class="space-for-future global-future-122"></div>
+        <div class="space-for-future global-future-123"></div>
+        <div class="space-for-future global-future-124"></div>
+        <div class="space-for-future global-future-125"></div>
+        <div class="space-for-future global-future-126"></div>
+        <div class="space-for-future global-future-127"></div>
+        <div class="space-for-future global-future-128"></div>
+        <div class="space-for-future global-future-129"></div>
+        <div class="space-for-future global-future-130"></div>
+        <div class="space-for-future global-future-131"></div>
+        <div class="space-for-future global-future-132"></div>
+        <div class="space-for-future global-future-133"></div>
+        <div class="space-for-future global-future-134"></div>
+        <div class="space-for-future global-future-135"></div>
+        <div class="space-for-future global-future-136"></div>
+        <div class="space-for-future global-future-137"></div>
+        <div class="space-for-future global-future-138"></div>
+        <div class="space-for-future global-future-139"></div>
+        <div class="space-for-future global-future-140"></div>
+        <div class="space-for-future global-future-141"></div>
+        <div class="space-for-future global-future-142"></div>
+        <div class="space-for-future global-future-143"></div>
+        <div class="space-for-future global-future-144"></div>
+        <div class="space-for-future global-future-145"></div>
+        <div class="space-for-future global-future-146"></div>
+        <div class="space-for-future global-future-147"></div>
+        <div class="space-for-future global-future-148"></div>
+        <div class="space-for-future global-future-149"></div>
+        <div class="space-for-future global-future-150"></div>
+        <div class="space-for-future global-future-151"></div>
+        <div class="space-for-future global-future-152"></div>
+        <div class="space-for-future global-future-153"></div>
+        <div class="space-for-future global-future-154"></div>
+        <div class="space-for-future global-future-155"></div>
+        <div class="space-for-future global-future-156"></div>
+        <div class="space-for-future global-future-157"></div>
+        <div class="space-for-future global-future-158"></div>
+        <div class="space-for-future global-future-159"></div>
+        <div class="space-for-future global-future-160"></div>
+        <div class="space-for-future global-future-161"></div>
+        <div class="space-for-future global-future-162"></div>
+        <div class="space-for-future global-future-163"></div>
+        <div class="space-for-future global-future-164"></div>
+        <div class="space-for-future global-future-165"></div>
+        <div class="space-for-future global-future-166"></div>
+        <div class="space-for-future global-future-167"></div>
+        <div class="space-for-future global-future-168"></div>
+        <div class="space-for-future global-future-169"></div>
+        <div class="space-for-future global-future-170"></div>
+        <div class="space-for-future global-future-171"></div>
+        <div class="space-for-future global-future-172"></div>
+        <div class="space-for-future global-future-173"></div>
+        <div class="space-for-future global-future-174"></div>
+        <div class="space-for-future global-future-175"></div>
+        <div class="space-for-future global-future-176"></div>
+        <div class="space-for-future global-future-177"></div>
+        <div class="space-for-future global-future-178"></div>
+        <div class="space-for-future global-future-179"></div>
+        <div class="space-for-future global-future-180"></div>
+        <div class="space-for-future global-future-181"></div>
+        <div class="space-for-future global-future-182"></div>
+        <div class="space-for-future global-future-183"></div>
+        <div class="space-for-future global-future-184"></div>
+        <div class="space-for-future global-future-185"></div>
+        <div class="space-for-future global-future-186"></div>
+        <div class="space-for-future global-future-187"></div>
+        <div class="space-for-future global-future-188"></div>
+        <div class="space-for-future global-future-189"></div>
+        <div class="space-for-future global-future-190"></div>
+        <div class="space-for-future global-future-191"></div>
+        <div class="space-for-future global-future-192"></div>
+        <div class="space-for-future global-future-193"></div>
+        <div class="space-for-future global-future-194"></div>
+        <div class="space-for-future global-future-195"></div>
+        <div class="space-for-future global-future-196"></div>
+        <div class="space-for-future global-future-197"></div>
+        <div class="space-for-future global-future-198"></div>
+        <div class="space-for-future global-future-199"></div>
+        <div class="space-for-future global-future-200"></div>
+    </div>
+
+    <!-- ============================================================
+         JS 引入顺序（不能乱，每个文件依赖前面的）
+         ============================================================ -->
+
+    <!-- 1. 配置和工具 -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/reply-library.js"></script>
+
+    <!-- 2. 状态和核心 -->
+    <script src="js/state.js"></script>
+    <script src="js/core.js"></script>
+
+    <!-- 3. 数据层 -->
+    <script src="js/data.js"></script>
+    <script src="js/backup-engine.js"></script>
+
+    <!-- 4. 业务基础模块 -->
+    <script src="js/mood.js"></script>
+    <script src="js/envelope.js"></script>
+    <script src="js/audio-player.js"></script>
+     <script src="js/chart.js"></script>
+    <script src="js/tarot-data.js"></script>
+    <script src="js/image-handler.js"></script>
+    <script src="js/features.js"></script>
+
+    <!-- 5. 独立模块 -->
+    <script src="js/call.js"></script>
+    <script src="js/group-chat.js"></script>
+    <script src="js/theme-editor.js"></script>
+    <script src="js/onboarding.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/member-picker.js"></script>
+    <script src="js/wordcard-lib.js"></script>
+    <script src="js/moments-visits.js"></script>
+    <script src="js/mall-all.js"></script>
+    <script src="js/question-engine.js"></script>
+    <script src="js/sticker-manager.js"></script>
+
+    <!-- 6. 事件监听 -->
+    <script src="js/listeners.js"></script>
+
+    <!-- 7. PWA -->
+    <script src="js/pwa.js"></script>
+
+    <!-- 8. 入口（必须最后） -->
+    <script src="js/main.js"></script>
+
+    <!-- 连接状态控制脚本（保留，作为外部接口） -->
+    <script>
+        /**
+         * 设置连接状态
+         * @param {number} level 0~6，表示连接质量
+         *   6 = 连接满格（六个实心爱心）
+         *   5 = 连接良好（五个实心爱心）
+         *   4 = 连接一般 (四个实心爱心)
+         *   3 = 连接较弱（三个实心爱心）
+         *   2 = 连接很差（两个实心爱心）
+         *   1 = 几乎断开（一个实心爱心）
+         *   0 = 未连接（全部空心）
+         */
+        function setConnectionStatus(level) {
+            level = Math.max(0, Math.min(6, Number(level) || 0));
+            const hearts = document.querySelectorAll('#connectionHearts .conn-heart');
+            hearts.forEach((heart, index) => {
+                if (index < level) {
+                    heart.classList.add('filled');
+                } else {
+                    heart.classList.remove('filled');
+                }
+            });
+        }
+
+        // 默认显示满格，可自行修改
+        setConnectionStatus(6);
+
+        // 使用示例：
+        // setConnectionStatus(6); // 六个实心爱心
+        // setConnectionStatus(5); // 五个实心爱心
+        // setConnectionStatus(3); // 三个实心爱心
+        // setConnectionStatus(0); // 全部空心
+    </script>
+</body>
+</html>
