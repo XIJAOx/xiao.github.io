@@ -1,27 +1,6 @@
 /* ==========================================================================
    梦角 · Dream Corner
    喝水模块  js/modules/water.js
-   --------------------------------------------------------------------------
-   覆盖 HTML 中的：
-     #screen-water
-       - #water-count / #water-sub             今日大数字
-       - #water-progress-bar                   进度条
-       - #water-cups > .water-cup[data-cup-index]  8 个杯子
-       - #water-bars > .water-bar-item[data-date]  近 7 天柱状
-       - #btn-water-minus / #btn-water-plus    加减
-       - #btn-water-remind                     提醒按钮
-       - #btn-water-send-chat / #btn-water-ta-remind   发到聊天 / TA 提醒
-       - #btn-water-set-goal / #btn-water-set-volume / #btn-water-add-reminder
-
-   数据结构（KEYS.WATER）：
-     {
-       goal: 8,               // 目标杯数
-       volumePerCup: 250,     // 每杯毫升
-       records: {
-         'YYYY-MM-DD': { cups, ml }
-       },
-       reminders: ['别忘了喝水', ...]   // 自定义提醒语
-     }
    ========================================================================== */
 
 import {
@@ -40,15 +19,11 @@ import {
 
 import { bus, on } from '../utils/event.js';
 
+import { mjPrompt, mjConfirm, mjAlert } from '../utils/dialogs.js';
 
-/* ==========================================================================
-   01. 常量
-   ========================================================================== */
 
-/** 图表展示最近 N 天 */
 const CHART_DAYS = 7;
 
-/** 默认提醒语池 */
 const DEFAULT_REMINDERS = [
     '别忘了喝水',
     '喝一口水吧，好嘛~',
@@ -57,7 +32,6 @@ const DEFAULT_REMINDERS = [
     '今天也要多喝水呀'
 ];
 
-/** TA 提醒的语料池 */
 const TA_REMIND_TEXTS = [
     '记得多喝水哦，我给你倒好了',
     '忙起来也要喝水呀，别让我担心',
@@ -66,17 +40,12 @@ const TA_REMIND_TEXTS = [
     '水杯就在手边吧？端起来喝一口'
 ];
 
-
-/* ==========================================================================
-   02. 内部状态
-   ========================================================================== */
-
 let _initialized = false;
 let _unsubs = [];
 
 
 /* ==========================================================================
-   03. 入口
+   入口
    ========================================================================== */
 
 export function initWater() {
@@ -84,17 +53,11 @@ export function initWater() {
     _initialized = true;
 
     ensureWaterData();
-    bindMainButtons();
-    bindActionButtons();
-    bindSettingButtons();
-
     renderAll();
 
     _unsubs.push(
         bus.on('screen:change', ({ id }) => {
-            if (id === 'screen-water') {
-                renderAll();
-            }
+            if (id === 'screen-water') renderAll();
         })
     );
 }
@@ -107,7 +70,7 @@ export function destroyWater() {
 
 
 /* ==========================================================================
-   04. 数据结构
+   数据
    ========================================================================== */
 
 function ensureWaterData() {
@@ -122,9 +85,6 @@ function ensureWaterData() {
     return data;
 }
 
-/**
- * 取今天的记录（不存在则创建）
- */
 function getTodayRecord() {
     const data = ensureWaterData();
     const today = formatDate();
@@ -135,9 +95,6 @@ function getTodayRecord() {
     return data.records[today];
 }
 
-/**
- * 保存今天的记录
- */
 function saveTodayRecord(record) {
     const data = ensureWaterData();
     const today = formatDate();
@@ -147,7 +104,7 @@ function saveTodayRecord(record) {
 
 
 /* ==========================================================================
-   05. 渲染：全部
+   渲染
    ========================================================================== */
 
 function renderAll() {
@@ -191,22 +148,12 @@ function renderCups() {
     });
 }
 
-
-/* ==========================================================================
-   06. 渲染：近 7 天柱状图
-   --------------------------------------------------------------------------
-   DOM：
-     .water-bars
-       .water-bar-item[data-date] > .water-bar + .water-bar-label
-   ========================================================================== */
-
 function renderChart() {
     const wrap = byId('water-bars');
     if (!wrap) return;
 
     const data = ensureWaterData();
 
-    // 生成最近 7 天
     const days = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -236,7 +183,6 @@ function renderChart() {
         bar.className = 'water-bar';
         if (day.isToday) bar.classList.add('active');
 
-        // 高度：按 cups / maxCups 比例，最低 6px
         const h = day.cups > 0
             ? Math.max(8, (day.cups / maxCups) * 100)
             : 6;
@@ -249,7 +195,6 @@ function renderChart() {
         item.appendChild(bar);
         item.appendChild(label);
 
-        // 点击显示当天数据
         item.addEventListener('click', () => {
             toast(`${day.ymd}：${day.cups} 杯`);
         });
@@ -260,21 +205,9 @@ function renderChart() {
 
 
 /* ==========================================================================
-   07. 交互：加减
+   加减一杯
    ========================================================================== */
 
-function bindMainButtons() {
-    const plus = byId('btn-water-plus');
-    const minus = byId('btn-water-minus');
-
-    if (plus) plus.addEventListener('click', () => changeCups(1));
-    if (minus) minus.addEventListener('click', () => changeCups(-1));
-}
-
-/**
- * 加减一杯
- * @param {number} delta  +1 / -1
- */
 export function changeCups(delta) {
     const data = ensureWaterData();
     const rec = getTodayRecord();
@@ -297,7 +230,6 @@ export function changeCups(delta) {
     renderProgress();
     renderChart();
 
-    // 达到目标时祝贺
     if (delta > 0 && next === data.goal) {
         toast('达成今日目标！好棒 🎉');
         bus.emit('water:goal-reached', { cups: next });
@@ -310,68 +242,47 @@ export function changeCups(delta) {
 
 
 /* ==========================================================================
-   08. 交互：发到聊天 / TA 提醒 / 提醒按钮
+   发到聊天 / TA 提醒 / 换提醒语
    ========================================================================== */
 
-function bindActionButtons() {
-    const sendChat = byId('btn-water-send-chat');
-    if (sendChat) {
-        sendChat.addEventListener('click', () => {
-            const data = ensureWaterData();
-            const rec = getTodayRecord();
-            const text = `我今天喝了 ${rec.cups} 杯水（${rec.ml} ml）~ 你也要多喝水呀 💧`;
-            bus.emit('chat:system-message', text);
-            toast('已发送到聊天');
-            bus.emit('nav:chat');
-        });
-    }
+export function sendToChat() {
+    const data = ensureWaterData();
+    const rec = getTodayRecord();
+    const text = `我今天喝了 ${rec.cups} 杯水（${rec.ml} ml）~ 你也要多喝水呀 💧`;
+    bus.emit('chat:system-message', text);
+    toast('已发送到聊天');
+    bus.emit('nav:chat');
+}
 
-    const taRemind = byId('btn-water-ta-remind');
-    if (taRemind) {
-        taRemind.addEventListener('click', () => {
-            const text = randomPick(TA_REMIND_TEXTS);
-            // 由 chat 模块去追加一条 TA 消息
-            bus.emit('chat:ta-message', text);
-            toast('TA 已经提醒你啦 💌');
-        });
-    }
+export function remindFromTa() {
+    const text = randomPick(TA_REMIND_TEXTS);
+    bus.emit('chat:ta-message', text);
+    toast('TA 已经提醒你啦 💌');
+}
 
+export function refreshReminder() {
+    const data = ensureWaterData();
+    const pool = data.reminders.length ? data.reminders : DEFAULT_REMINDERS;
     const remindBtn = byId('btn-water-remind');
-    if (remindBtn) {
-        remindBtn.addEventListener('click', () => {
-            const data = ensureWaterData();
-            const pool = data.reminders.length ? data.reminders : DEFAULT_REMINDERS;
-            remindBtn.textContent = `"${randomPick(pool)}"`;
-            toast('换了一句提醒');
-        });
-    }
+    if (remindBtn) remindBtn.textContent = `"${randomPick(pool)}"`;
+    toast('换了一句提醒');
 }
 
 
 /* ==========================================================================
-   09. 交互：设置（目标 / 单次量 / 加提醒）
+   设置
    ========================================================================== */
 
-function bindSettingButtons() {
-    const goalBtn = byId('btn-water-set-goal');
-    if (goalBtn) goalBtn.addEventListener('click', setGoal);
-
-    const volumeBtn = byId('btn-water-set-volume');
-    if (volumeBtn) volumeBtn.addEventListener('click', setVolume);
-
-    const reminderBtn = byId('btn-water-add-reminder');
-    if (reminderBtn) reminderBtn.addEventListener('click', addReminder);
-}
-
-/**
- * 设置目标杯数
- */
-export function setGoal() {
+export async function setGoal() {
     const data = ensureWaterData();
-    const input = window.prompt('每天目标杯数（1-30）：', String(data.goal));
+    const input = await mjPrompt('每天目标杯数', {
+        placeholder: '1 - 30 杯',
+        defaultValue: String(data.goal),
+        confirmText: '保存'
+    });
     if (input === null) return;
 
-    const n = parseInt(input, 10);
+    const n = parseInt(String(input).trim(), 10);
     if (Number.isNaN(n) || n < 1 || n > 30) {
         toast('请输入 1-30 之间的数字');
         return;
@@ -383,22 +294,22 @@ export function setGoal() {
     toast(`目标已设为 ${n} 杯`);
 }
 
-/**
- * 设置单杯容量
- */
-export function setVolume() {
+export async function setVolume() {
     const data = ensureWaterData();
-    const input = window.prompt('每杯容量（ml，50-1000）：', String(data.volumePerCup));
+    const input = await mjPrompt('每杯容量（ml）', {
+        placeholder: '50 - 1000',
+        defaultValue: String(data.volumePerCup),
+        confirmText: '保存'
+    });
     if (input === null) return;
 
-    const n = parseInt(input, 10);
+    const n = parseInt(String(input).trim(), 10);
     if (Number.isNaN(n) || n < 50 || n > 1000) {
         toast('请输入 50-1000 之间的数字');
         return;
     }
 
     data.volumePerCup = n;
-    // 重新计算今天 ml
     const rec = getTodayRecord();
     rec.ml = (rec.cups || 0) * n;
     data.records[formatDate()] = rec;
@@ -408,20 +319,19 @@ export function setVolume() {
     toast(`单杯已设为 ${n} ml`);
 }
 
-/**
- * 添加自定义提醒语
- */
-export function addReminder() {
-    const text = window.prompt('写一句提醒自己的话：', '');
+export async function addReminder() {
+    const text = await mjPrompt('写一句提醒自己的话', {
+        placeholder: '例如：多喝水皮肤好',
+        confirmText: '添加'
+    });
     if (text === null) return;
-    const trimmed = text.trim();
+    const trimmed = String(text).trim();
     if (!trimmed) return;
 
     const data = ensureWaterData();
     data.reminders.push(trimmed);
     set(KEYS.WATER, data);
 
-    // 立刻应用
     const remindBtn = byId('btn-water-remind');
     if (remindBtn) remindBtn.textContent = `"${trimmed}"`;
 
@@ -430,17 +340,17 @@ export function addReminder() {
 
 
 /* ==========================================================================
-   10. 供 app.js 注册的 action / nav 集合
+   actions / navs
    ========================================================================== */
 
 export const waterActions = {
-    'water-plus':       () => changeCups(1),
-    'water-minus':      () => changeCups(-1),
-    'water-send-chat':  () => byId('btn-water-send-chat')?.click(),
-    'water-ta-remind':  () => byId('btn-water-ta-remind')?.click(),
-    'water-remind':     () => byId('btn-water-remind')?.click(),
-    'water-set-goal':   () => setGoal(),
-    'water-set-volume': () => setVolume(),
+    'water-plus':         () => changeCups(1),
+    'water-minus':        () => changeCups(-1),
+    'water-send-chat':    () => sendToChat(),
+    'water-ta-remind':    () => remindFromTa(),
+    'water-remind':       () => refreshReminder(),
+    'water-set-goal':     () => setGoal(),
+    'water-set-volume':   () => setVolume(),
     'water-add-reminder': () => addReminder()
 };
 
@@ -451,11 +361,6 @@ export const waterNavs = {
         showScreen('screen-water');
     }
 };
-
-
-/* ==========================================================================
-   11. 对外导出
-   ========================================================================== */
 
 export default {
     initWater,
