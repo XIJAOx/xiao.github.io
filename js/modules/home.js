@@ -377,28 +377,111 @@ function bindPager() {
     const pages = byId('home-pages');
     if (!pages) return;
 
+    // 1. 滚动同步页码
     let ticking = false;
-    pages.addEventListener(
-        'scroll',
-        () => {
-            if (ticking) return;
-            ticking = true;
-            window.requestAnimationFrame(() => {
-                const w = pages.clientWidth || 1;
-                const idx = Math.round(pages.scrollLeft / w) + 1;
-                if (idx !== _currentPage) {
-                    _currentPage = idx;
-                    pages.dataset.currentPage = String(idx);
-                    bus.emit('home:page-change', { page: idx });
-                }
-                ticking = false;
-            });
-        },
-        { passive: true }
-    );
+    pages.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(() => {
+            const w = pages.clientWidth || 1;
+            const idx = Math.round(pages.scrollLeft / w) + 1;
+            if (idx !== _currentPage) {
+                _currentPage = idx;
+                pages.dataset.currentPage = String(idx);
+                bus.emit('home:page-change', { page: idx });
+                updatePagerDots(idx);
+            }
+            ticking = false;
+        });
+    }, { passive: true });
+
+    // 2. 增强触摸滑动
+    enhanceSwipe(pages);
+
+    // 3. 添加翻页指示点
+    addPagerDots(pages);
 }
 
+/**
+ * 增强触摸滑动：解决 scroll-snap 在移动端不灵敏的问题
+ */
+function enhanceSwipe(pages) {
+    let startX = 0, startY = 0, isSwiping = false, isHorizontal = null;
 
+    pages.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        isSwiping = true;
+        isHorizontal = null;
+    }, { passive: true });
+
+    pages.addEventListener('touchmove', (e) => {
+        if (!isSwiping) return;
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+
+        // 判断方向（一但确定是横向滑动，就拦截默认行为，避免被内部纵向滚动抢走）
+        if (isHorizontal === null && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+            isHorizontal = Math.abs(dx) > Math.abs(dy);
+        }
+
+        if (isHorizontal) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    pages.addEventListener('touchend', (e) => {
+        if (!isSwiping) return;
+        isSwiping = false;
+
+        if (isHorizontal === true) {
+            const dx = e.changedTouches[0].clientX - startX;
+            const w = pages.clientWidth;
+            const currentPage = Math.round(pages.scrollLeft / w);
+            let target = currentPage;
+
+            // 横向位移超过 40px 才翻页，避免误触
+            if (dx < -40) target = Math.min(1, currentPage + 1);
+            else if (dx > 40) target = Math.max(0, currentPage - 1);
+
+            if (target !== currentPage) {
+                pages.scrollTo({ left: target * w, behavior: 'smooth' });
+            }
+        }
+    });
+}
+
+/**
+ * 在底部加两个小圆点（指示 + 可点击翻页）
+ */
+function addPagerDots(pages) {
+    const screen = pages.closest('.screen-home');
+    if (!screen) return;
+    if (screen.querySelector('.home-pager-dots')) return;
+
+    const dotsWrap = document.createElement('div');
+    dotsWrap.className = 'home-pager-dots';
+    dotsWrap.innerHTML = `
+        <span class="home-pager-dot active" data-page="1"></span>
+        <span class="home-pager-dot" data-page="2"></span>
+    `;
+    screen.appendChild(dotsWrap);
+
+    dotsWrap.addEventListener('click', (e) => {
+        const dot = e.target.closest('.home-pager-dot');
+        if (!dot) return;
+        const page = parseInt(dot.dataset.page, 10);
+        const w = pages.clientWidth;
+        pages.scrollTo({ left: (page - 1) * w, behavior: 'smooth' });
+    });
+}
+
+function updatePagerDots(page) {
+    document.querySelectorAll('.home-pager-dot').forEach((d) => {
+        d.classList.toggle('active', parseInt(d.dataset.page, 10) === page);
+    });
+               }
 /* ==========================================================================
    11. 交互：打卡
    ========================================================================== */
