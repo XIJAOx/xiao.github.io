@@ -1,34 +1,6 @@
 /* ==========================================================================
    梦角 · Dream Corner
    经期记录模块  js/modules/period.js
-   --------------------------------------------------------------------------
-   覆盖 HTML 中的：
-     #screen-period
-       - 头部：#btn-period-notifications / #btn-period-settings
-       - 记录卡片：#period-info-title / #period-info-sub
-                   #btn-mark-period-start / #btn-record-today
-       - 日历卡片：#calendar-nav / #btn-calendar-prev / #calendar-title
-                   #btn-calendar-next / #period-calendar
-       - 历史记录：#period-history-list
-       - 统计：#period-stat-text / #period-stat-sub / #btn-monthly-report
-       - 症状建议：#period-relief-text
-       - 健康贴士：#period-tips-text / #period-tip-text
-
-   数据结构（KEYS.PERIOD）：
-     {
-       records: [
-         { id, start: 'YYYY-MM-DD', end: 'YYYY-MM-DD'|null, symptoms: [], note }
-       ],
-       settings: {
-         cycleLength: 28,       // 平均周期天数
-         periodLength: 5,       // 平均经期天数
-         reminder: false,
-         ovulationOffset: 14    // 排卵日距下次月经天数
-       },
-       symptoms: {
-         'YYYY-MM-DD': ['头痛', '乏力']
-       }
-     }
    ========================================================================== */
 
 import {
@@ -47,22 +19,17 @@ import {
 
 import { bus, on } from '../utils/event.js';
 
+import { mjPrompt, mjConfirm, mjAlert } from '../utils/dialogs.js';
 
-/* ==========================================================================
-   01. 常量
-   ========================================================================== */
 
-/** 单次经期最短 / 最长天数（用于校验） */
 const MIN_PERIOD_DAYS = 1;
 const MAX_PERIOD_DAYS = 15;
 
-/** 可选症状列表 */
 const SYMPTOM_LIST = [
     '腹痛', '腰酸', '头痛', '乏力', '情绪低落',
     '乳房胀痛', '食欲不振', '长痘', '便秘', '失眠'
 ];
 
-/** 症状 → 缓解建议 */
 const RELIEF_TIPS = {
     '腹痛':     '喝杯温热的红糖姜茶，用暖水袋热敷小腹，能缓解绞痛。',
     '腰酸':     '避免久坐久站，躺下时在腰下垫个薄枕，让腰背放松。',
@@ -76,7 +43,6 @@ const RELIEF_TIPS = {
     '失眠':     '睡前泡泡脚，少刷手机，把灯光调暗。'
 };
 
-/** 健康小贴士随机池 */
 const HEALTH_TIPS = [
     '经期注意保暖，别喝冰饮，小腹暖起来疼痛会轻很多。',
     '记录症状能帮你看清自己的规律，也能让医生更了解你。',
@@ -88,24 +54,15 @@ const HEALTH_TIPS = [
     '如果疼痛严重影响生活，一定要去看医生。'
 ];
 
-
-/* ==========================================================================
-   02. 内部状态
-   ========================================================================== */
-
 let _initialized = false;
 let _unsubs = [];
-
-/** 当前显示的日历年月 */
 let _viewYear;
-let _viewMonth;   // 0-11
-
-/** 长按录入症状时暂存的目标日期 */
+let _viewMonth;
 let _longPressDate = null;
 
 
 /* ==========================================================================
-   03. 入口
+   入口
    ========================================================================== */
 
 export function initPeriod() {
@@ -128,16 +85,11 @@ export function initPeriod() {
 
     _unsubs.push(
         bus.on('screen:change', ({ id }) => {
-            if (id === 'screen-period') {
-                renderAll();
-            }
+            if (id === 'screen-period') renderAll();
         })
     );
 
-    // 响应首页请求
-    bus.on('home:request-period-status', () => {
-        syncHomeCard();
-    });
+    bus.on('home:request-period-status', () => syncHomeCard());
 }
 
 export function destroyPeriod() {
@@ -148,7 +100,7 @@ export function destroyPeriod() {
 
 
 /* ==========================================================================
-   04. 数据结构
+   数据
    ========================================================================== */
 
 function ensurePeriodData() {
@@ -169,30 +121,19 @@ function ensurePeriodData() {
     return data;
 }
 
-function getRecords() {
-    return ensurePeriodData().records;
-}
-
+function getRecords() { return ensurePeriodData().records; }
 function saveRecords(list) {
     const data = get(KEYS.PERIOD);
     data.records = list;
     set(KEYS.PERIOD, data);
 }
-
-function getSettings() {
-    return ensurePeriodData().settings;
-}
-
+function getSettings() { return ensurePeriodData().settings; }
 function saveSettings(patch) {
     const data = get(KEYS.PERIOD);
     data.settings = { ...data.settings, ...patch };
     set(KEYS.PERIOD, data);
 }
-
-function getSymptomsMap() {
-    return ensurePeriodData().symptoms;
-}
-
+function getSymptomsMap() { return ensurePeriodData().symptoms; }
 function saveSymptomsMap(map) {
     const data = get(KEYS.PERIOD);
     data.symptoms = map;
@@ -201,14 +142,11 @@ function saveSymptomsMap(map) {
 
 
 /* ==========================================================================
-   05. 日期工具
+   日期工具
    ========================================================================== */
 
 const pad2 = (n) => String(n).padStart(2, '0');
 
-/**
- * 用 "YYYY-MM-DD" 字符串构造 Date（避免时区问题）
- */
 function parseYmd(ymd) {
     if (!ymd) return null;
     const parts = String(ymd).split('-').map(Number);
@@ -216,16 +154,10 @@ function parseYmd(ymd) {
     return new Date(parts[0], parts[1] - 1, parts[2]);
 }
 
-/**
- * Date → "YYYY-MM-DD"
- */
 function toYmd(date) {
     return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
-/**
- * 两个日期相差天数
- */
 function daysBetween(a, b) {
     const d1 = parseYmd(a);
     const d2 = parseYmd(b);
@@ -235,9 +167,6 @@ function daysBetween(a, b) {
     return Math.round((d2 - d1) / 86400000);
 }
 
-/**
- * 日期加减 n 天，返回 "YYYY-MM-DD"
- */
 function addDays(ymd, n) {
     const d = parseYmd(ymd);
     if (!d) return null;
@@ -245,9 +174,6 @@ function addDays(ymd, n) {
     return toYmd(d);
 }
 
-/**
- * ymd 是否在 [start, end] 区间内（含端点）
- */
 function isInRange(ymd, start, end) {
     if (!ymd || !start) return false;
     const s = parseYmd(start);
@@ -259,35 +185,23 @@ function isInRange(ymd, start, end) {
 
 
 /* ==========================================================================
-   06. 计算：当前状态 / 预测 / 排卵
+   计算
    ========================================================================== */
 
-/**
- * 找出最近一次已开始的经期记录
- */
 function getLatestRecord() {
     const list = getRecords().filter((r) => r.start);
     if (!list.length) return null;
     return list.slice().sort((a, b) => (a.start < b.start ? 1 : -1))[0];
 }
 
-/**
- * 当前是否处于经期中
- * 规则：最新记录没有 end 且今天距离 start 在 periodLength 内
- */
 function isCurrentlyOnPeriod() {
     const latest = getLatestRecord();
     if (!latest) return false;
     if (latest.end) return false;
-
     const days = daysBetween(latest.start, toYmd(new Date()));
     return days >= 0 && days <= (getSettings().periodLength || 5) + 3;
 }
 
-/**
- * 预测下次经期开始日
- * 用最新的 start + cycleLength
- */
 function predictNextStart() {
     const latest = getLatestRecord();
     if (!latest) return null;
@@ -295,24 +209,13 @@ function predictNextStart() {
     return addDays(latest.start, cycle);
 }
 
-/**
- * 计算预测区间（下次经期的起止日）
- */
 function predictRange() {
     const nextStart = predictNextStart();
     if (!nextStart) return null;
     const len = getSettings().periodLength || 5;
-    return {
-        start: nextStart,
-        end: addDays(nextStart, len - 1)
-    };
+    return { start: nextStart, end: addDays(nextStart, len - 1) };
 }
 
-/**
- * 计算排卵日 / 排卵期
- * 排卵日 = 下次经期开始日 - ovulationOffset（默认 14）
- * 排卵期 = 排卵日 ± 4 天（共 9 天窗口）
- */
 function getOvulationRange() {
     const nextStart = predictNextStart();
     if (!nextStart) return null;
@@ -326,30 +229,20 @@ function getOvulationRange() {
     };
 }
 
-/**
- * 判断某个日期在展示时的"标记类型"
- * @returns {'period'|'predicted'|'ovulation'|'symptom'|'today'|''}
- */
 function getDayFlag(ymd) {
     const today = toYmd(new Date());
-
-    // 今天
     if (ymd === today) return 'today';
 
-    // 已记录的经期
     for (const r of getRecords()) {
         if (isInRange(ymd, r.start, r.end)) return 'period';
     }
 
-    // 预测区间
     const pr = predictRange();
     if (pr && isInRange(ymd, pr.start, pr.end)) return 'predicted';
 
-    // 排卵期
     const ov = getOvulationRange();
     if (ov && isInRange(ymd, ov.start, ov.end)) return 'ovulation';
 
-    // 有症状记录
     const sm = getSymptomsMap();
     if (sm[ymd] && sm[ymd].length) return 'symptom';
 
@@ -358,7 +251,7 @@ function getDayFlag(ymd) {
 
 
 /* ==========================================================================
-   07. 渲染：全部
+   渲染：全部
    ========================================================================== */
 
 function renderAll() {
@@ -371,9 +264,6 @@ function renderAll() {
     syncHomeCard();
 }
 
-/**
- * 顶部记录卡片（今天的整体状态）
- */
 function renderStatusCard() {
     const titleEl = byId('period-info-title');
     const subEl = byId('period-info-sub');
@@ -388,18 +278,14 @@ function renderStatusCard() {
         return;
     }
 
-    // 进行中
     if (isCurrentlyOnPeriod()) {
         const day = daysBetween(latest.start, today) + 1;
         const total = settings.periodLength || 5;
         if (titleEl) titleEl.textContent = `经期第 ${day} 天`;
-        if (subEl) {
-            subEl.textContent = `预计经期共 ${total} 天，注意休息 ♥`;
-        }
+        if (subEl) subEl.textContent = `预计经期共 ${total} 天，注意休息 ♥`;
         return;
     }
 
-    // 已结束 → 显示距离下次
     const nextStart = predictNextStart();
     if (nextStart) {
         const d = daysBetween(today, nextStart);
@@ -418,22 +304,16 @@ function renderStatusCard() {
 
 
 /* ==========================================================================
-   08. 渲染：日历
-   --------------------------------------------------------------------------
-   月份标题、上个月、下个月、每格的状态
+   渲染：日历
    ========================================================================== */
 
 function renderCalendar() {
     const titleEl = byId('calendar-title');
-    if (titleEl) {
-        titleEl.textContent = `${_viewYear} 年 ${_viewMonth + 1} 月`;
-    }
+    if (titleEl) titleEl.textContent = `${_viewYear} 年 ${_viewMonth + 1} 月`;
 
     const grid = byId('period-calendar');
     if (!grid) return;
 
-    // 保留 7 个表头（日一二三四五六）
-    // 用最简单的方式：清空后重建
     grid.innerHTML = '';
 
     ['日', '一', '二', '三', '四', '五', '六'].forEach((label) => {
@@ -444,21 +324,18 @@ function renderCalendar() {
         grid.appendChild(cell);
     });
 
-    // 当月第一天是星期几
     const first = new Date(_viewYear, _viewMonth, 1);
     const firstWeekday = first.getDay();
 
-    // 上月尾部空白
     for (let i = 0; i < firstWeekday; i++) {
         const blank = document.createElement('div');
         blank.className = 'calendar-day calendar-day-empty';
         grid.appendChild(blank);
     }
 
-    // 当月天数
     const daysInMonth = new Date(_viewYear, _viewMonth + 1, 0).getDate();
-
     const today = toYmd(new Date());
+    const sm = getSymptomsMap();
 
     for (let d = 1; d <= daysInMonth; d++) {
         const ymd = `${_viewYear}-${pad2(_viewMonth + 1)}-${pad2(d)}`;
@@ -467,27 +344,16 @@ function renderCalendar() {
         cell.dataset.date = ymd;
         cell.textContent = String(d);
 
-        if (ymd === today) {
-            cell.classList.add('today');
-        }
+        if (ymd === today) cell.classList.add('today');
 
         const flag = getDayFlag(ymd);
-        if (flag && flag !== 'today') {
-            cell.classList.add(flag);
-        } else if (flag === 'today') {
-            // today 已加
-        }
+        if (flag && flag !== 'today') cell.classList.add(flag);
 
-        // 检查是否有症状
-        const sm = getSymptomsMap();
-        if (sm[ymd] && sm[ymd].length) {
-            cell.classList.add('symptom');
-        }
+        if (sm[ymd] && sm[ymd].length) cell.classList.add('symptom');
 
         grid.appendChild(cell);
     }
 
-    // 月末补齐到 7 的倍数（可选）
     const total = firstWeekday + daysInMonth;
     const remain = (7 - (total % 7)) % 7;
     for (let i = 0; i < remain; i++) {
@@ -499,10 +365,7 @@ function renderCalendar() {
 
 
 /* ==========================================================================
-   09. 交互：日历
-   --------------------------------------------------------------------------
-   - 单击某天：若该天已有记录，取消记录；否则把该天加入当前记录区间
-   - 长按某天：打开症状录入
+   日历交互
    ========================================================================== */
 
 function bindCalendarNav() {
@@ -516,7 +379,6 @@ function bindCalendarNav() {
             renderCalendar();
         });
     }
-
     if (next) {
         next.addEventListener('click', () => {
             _viewMonth++;
@@ -530,14 +392,12 @@ function bindCalendarDelegate() {
     const grid = byId('period-calendar');
     if (!grid) return;
 
-    /* ---------- 单击 ---------- */
     grid.addEventListener('click', (e) => {
         const cell = e.target.closest('.calendar-day');
         if (!cell || cell.classList.contains('calendar-day-empty')) return;
         const ymd = cell.dataset.date;
         if (!ymd) return;
 
-        // 若刚才触发了长按，则忽略本次点击
         if (_longPressDate === ymd) {
             _longPressDate = null;
             return;
@@ -546,7 +406,6 @@ function bindCalendarDelegate() {
         toggleDayRecord(ymd);
     });
 
-    /* ---------- 长按 ---------- */
     let pressTimer = null;
     let pressYmd = null;
 
@@ -569,7 +428,6 @@ function bindCalendarDelegate() {
     grid.addEventListener('touchmove', cancelPress);
     grid.addEventListener('touchcancel', cancelPress);
 
-    // 桌面端右键
     grid.addEventListener('contextmenu', (e) => {
         const cell = e.target.closest('.calendar-day');
         if (!cell || cell.classList.contains('calendar-day-empty')) return;
@@ -578,27 +436,19 @@ function bindCalendarDelegate() {
     });
 }
 
-/**
- * 单击某天：切换为经期 / 取消经期
- */
 function toggleDayRecord(ymd) {
     const list = getRecords();
-
-    // 若某条记录包含该天，则从该记录中"删除这一天"
-    // 简化处理：如果该天正好是某条记录的 start 或 end，删除整条；否则跳过
     let handled = false;
+
     for (const r of list) {
         if (isInRange(ymd, r.start, r.end)) {
             if (r.start === ymd && (!r.end || r.start === r.end)) {
-                // 单日记录 → 整条删除
                 const idx = list.indexOf(r);
                 list.splice(idx, 1);
             } else if (r.start === ymd) {
-                // 从头去掉一天
                 r.start = addDays(r.start, 1);
                 if (daysBetween(r.start, r.end) < 0) r.end = r.start;
             } else if (r.end === ymd) {
-                // 从尾去掉一天
                 r.end = addDays(r.end, -1);
                 if (daysBetween(r.start, r.end) < 0) r.end = r.start;
             } else {
@@ -611,10 +461,8 @@ function toggleDayRecord(ymd) {
     }
 
     if (!handled) {
-        // 新增一天：合并到最近的记录，或新建一条
         const latest = getLatestRecord();
         if (latest && !latest.end && daysBetween(latest.start, ymd) >= 0 && daysBetween(latest.start, ymd) <= 15) {
-            // 并入当前未结束的记录
             latest.end = ymd;
         } else {
             list.push({
@@ -627,7 +475,6 @@ function toggleDayRecord(ymd) {
         }
     }
 
-    // 按开始日排序
     list.sort((a, b) => (a.start < b.start ? -1 : 1));
     saveRecords(list);
 
@@ -637,7 +484,7 @@ function toggleDayRecord(ymd) {
 
 
 /* ==========================================================================
-   10. 症状录入面板
+   症状面板
    ========================================================================== */
 
 let _symptomPanelEl = null;
@@ -654,7 +501,6 @@ function openSymptomPanel(ymd) {
     _symptomPanelEl.dataset.date = ymd;
     _symptomPanelEl.hidden = false;
 
-    // 渲染当前选中状态
     const sm = getSymptomsMap();
     const selected = sm[ymd] || [];
 
@@ -706,7 +552,6 @@ function createSymptomPanel() {
         </div>
     `;
 
-    // 事件
     panel.addEventListener('click', (e) => {
         if (e.target.closest('[data-symptom-close]')) {
             panel.hidden = true;
@@ -724,9 +569,7 @@ function createSymptomPanel() {
         }
 
         const chip = e.target.closest('[data-symptom]');
-        if (chip) {
-            chip.classList.toggle('active');
-        }
+        if (chip) chip.classList.toggle('active');
     });
 
     return panel;
@@ -765,12 +608,9 @@ function saveSymptoms(ymd, panel) {
     else delete sm[ymd];
     saveSymptomsMap(sm);
 
-    // 备注写到所属记录上
     const list = getRecords();
     list.forEach((r) => {
-        if (isInRange(ymd, r.start, r.end) && note) {
-            r.note = note;
-        }
+        if (isInRange(ymd, r.start, r.end) && note) r.note = note;
     });
     saveRecords(list);
 
@@ -780,36 +620,27 @@ function saveSymptoms(ymd, panel) {
 
 
 /* ==========================================================================
-   11. 记录按钮
+   记录按钮
    ========================================================================== */
 
 function bindRecordButtons() {
     const startBtn = byId('btn-mark-period-start');
-    if (startBtn) {
-        startBtn.addEventListener('click', markTodayAsStart);
-    }
+    if (startBtn) startBtn.addEventListener('click', markTodayAsStart);
 
     const recordBtn = byId('btn-record-today');
-    if (recordBtn) {
-        recordBtn.addEventListener('click', recordToday);
-    }
+    if (recordBtn) recordBtn.addEventListener('click', recordToday);
 }
 
-/**
- * 标记今天为经期开始
- */
 function markTodayAsStart() {
     const today = toYmd(new Date());
     const list = getRecords();
 
-    // 若已存在
     const existing = list.find((r) => r.start === today);
     if (existing) {
         toast('今天已经是经期开始日了');
         return;
     }
 
-    // 若存在未结束的记录，先收尾
     const latest = getLatestRecord();
     if (latest && !latest.end) {
         const len = getSettings().periodLength || 5;
@@ -831,9 +662,6 @@ function markTodayAsStart() {
     bus.emit('period:update', { text: '经期第 1 天' });
 }
 
-/**
- * 记录今天（若已开始则延长；否则视为新开始）
- */
 function recordToday() {
     const today = toYmd(new Date());
     const latest = getLatestRecord();
@@ -855,13 +683,12 @@ function recordToday() {
         return;
     }
 
-    // 没有进行中的记录 → 视为新开始
     markTodayAsStart();
 }
 
 
 /* ==========================================================================
-   12. 历史记录
+   历史
    ========================================================================== */
 
 function renderHistory() {
@@ -871,7 +698,6 @@ function renderHistory() {
 
     const list = getRecords().slice().sort((a, b) => (a.start < b.start ? 1 : -1));
 
-    // 清空
     listEl.innerHTML = '';
 
     if (!list.length) {
@@ -901,7 +727,6 @@ function renderHistory() {
         row.appendChild(dateEl);
         row.appendChild(lenEl);
 
-        // 点击 → 跳到该月
         row.addEventListener('click', () => {
             const d = parseYmd(r.start);
             if (d) {
@@ -918,7 +743,7 @@ function renderHistory() {
 
 
 /* ==========================================================================
-   13. 统计
+   统计
    ========================================================================== */
 
 function renderStats() {
@@ -932,16 +757,12 @@ function renderStats() {
         if (subEl) {
             const sm = getSymptomsMap();
             const dates = Object.keys(sm).filter((k) => sm[k].length);
-            if (dates.length) {
-                subEl.textContent = `已记录 ${dates.length} 天症状`;
-            } else {
-                subEl.textContent = '暂无症状记录（长按日格可录入）';
-            }
+            if (dates.length) subEl.textContent = `已记录 ${dates.length} 天症状`;
+            else subEl.textContent = '暂无症状记录（长按日格可录入）';
         }
         return;
     }
 
-    // 计算平均周期（相邻两次 start 的差）
     const sorted = list.slice().sort((a, b) => (a.start < b.start ? -1 : 1));
     const cycles = [];
     const lengths = [];
@@ -962,7 +783,6 @@ function renderStats() {
         ? Math.round(lengths.reduce((a, b) => a + b, 0) / lengths.length)
         : (getSettings().periodLength || 5);
 
-    // 同步到设置里，让预测更准
     saveSettings({ cycleLength: avgCycle, periodLength: avgLen });
 
     textEl.textContent = `平均周期 ${avgCycle} 天 · 平均经期 ${avgLen} 天（基于最近 ${sorted.length} 次记录）`;
@@ -971,9 +791,7 @@ function renderStats() {
         const sm = getSymptomsMap();
         const freq = {};
         Object.values(sm).forEach((arr) => {
-            (arr || []).forEach((s) => {
-                freq[s] = (freq[s] || 0) + 1;
-            });
+            (arr || []).forEach((s) => { freq[s] = (freq[s] || 0) + 1; });
         });
         const top = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 3);
         subEl.textContent = top.length
@@ -984,7 +802,7 @@ function renderStats() {
 
 
 /* ==========================================================================
-   14. 症状缓解建议
+   症状建议
    ========================================================================== */
 
 function renderRelief() {
@@ -994,9 +812,7 @@ function renderRelief() {
     const sm = getSymptomsMap();
     const freq = {};
     Object.values(sm).forEach((arr) => {
-        (arr || []).forEach((s) => {
-            freq[s] = (freq[s] || 0) + 1;
-        });
+        (arr || []).forEach((s) => { freq[s] = (freq[s] || 0) + 1; });
     });
 
     const top = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 3);
@@ -1015,29 +831,25 @@ function renderRelief() {
 
 
 /* ==========================================================================
-   15. 健康小贴士
+   贴士
    ========================================================================== */
 
 function renderTips() {
     const tipEl = byId('period-tip-text');
-    if (tipEl) {
-        tipEl.textContent = '梦角 · ' + randomPick(HEALTH_TIPS);
-    }
+    if (tipEl) tipEl.textContent = '梦角 · ' + randomPick(HEALTH_TIPS);
 }
 
 
 /* ==========================================================================
-   16. 月度报告
+   月度报告
    ========================================================================== */
 
 function bindStatsButton() {
     const btn = byId('btn-monthly-report');
-    if (btn) {
-        btn.addEventListener('click', showMonthlyReport);
-    }
+    if (btn) btn.addEventListener('click', showMonthlyReport);
 }
 
-function showMonthlyReport() {
+async function showMonthlyReport() {
     const list = getRecords();
     const now = new Date();
     const y = now.getFullYear();
@@ -1066,17 +878,15 @@ function showMonthlyReport() {
         return `${r.start} ~ ${r.end || '进行中'}（${days} 天）`;
     }).join('\n');
 
-    window.alert(
-        `【${y} 年 ${m + 1} 月报告】\n\n` +
-        `记录次数：${inMonth.length}\n` +
-        `症状天数：${monthSymptomDays}\n\n` +
-        `明细：\n${lines}`
+    await mjAlert(
+        `记录次数：${inMonth.length}\n症状天数：${monthSymptomDays}\n\n明细：\n${lines}`,
+        { title: `${y} 年 ${m + 1} 月报告` }
     );
 }
 
 
 /* ==========================================================================
-   17. 头部按钮
+   头部按钮
    ========================================================================== */
 
 function bindHeaderButtons() {
@@ -1091,23 +901,30 @@ function bindHeaderButtons() {
     }
 
     const settingsBtn = byId('btn-period-settings');
-    if (settingsBtn) {
-        settingsBtn.addEventListener('click', openPeriodSettings);
-    }
+    if (settingsBtn) settingsBtn.addEventListener('click', openPeriodSettings);
 }
 
-function openPeriodSettings() {
+async function openPeriodSettings() {
     const s = getSettings();
-    const cycle = window.prompt('平均周期天数（默认 28）：', String(s.cycleLength || 28));
+
+    const cycle = await mjPrompt('平均周期天数（默认 28）', {
+        placeholder: '15 - 60 天',
+        defaultValue: String(s.cycleLength || 28),
+        confirmText: '下一步'
+    });
     if (cycle === null) return;
-    const cycleNum = parseInt(cycle, 10);
+    const cycleNum = parseInt(String(cycle).trim(), 10);
     if (!Number.isNaN(cycleNum) && cycleNum >= 15 && cycleNum <= 60) {
         saveSettings({ cycleLength: cycleNum });
     }
 
-    const len = window.prompt('平均经期天数（默认 5）：', String(s.periodLength || 5));
+    const len = await mjPrompt('平均经期天数（默认 5）', {
+        placeholder: '1 - 15 天',
+        defaultValue: String(s.periodLength || 5),
+        confirmText: '保存'
+    });
     if (len === null) return;
-    const lenNum = parseInt(len, 10);
+    const lenNum = parseInt(String(len).trim(), 10);
     if (!Number.isNaN(lenNum) && lenNum >= 1 && lenNum <= 15) {
         saveSettings({ periodLength: lenNum });
     }
@@ -1118,7 +935,7 @@ function openPeriodSettings() {
 
 
 /* ==========================================================================
-   18. 同步首页卡片
+   同步首页
    ========================================================================== */
 
 function syncHomeCard() {
@@ -1126,10 +943,7 @@ function syncHomeCard() {
     if (!el) return;
 
     const latest = getLatestRecord();
-    if (!latest) {
-        el.textContent = '未记录';
-        return;
-    }
+    if (!latest) { el.textContent = '未记录'; return; }
 
     if (isCurrentlyOnPeriod()) {
         const day = daysBetween(latest.start, toYmd(new Date())) + 1;
@@ -1148,7 +962,7 @@ function syncHomeCard() {
 
 
 /* ==========================================================================
-   19. 供 app.js 注册的 action / nav 集合
+   actions / navs
    ========================================================================== */
 
 export const periodActions = {
@@ -1168,11 +982,6 @@ export const periodNavs = {
         showScreen('screen-period');
     }
 };
-
-
-/* ==========================================================================
-   20. 对外导出
-   ========================================================================== */
 
 export default {
     initPeriod,
