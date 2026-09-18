@@ -967,14 +967,14 @@ function bindBusHandlers() {
    ========================================================================== */
 
 export const musicActions = {
-    'music-batch-manage': () => byId('btn-music-batch-manage')?.click(),
-    'add-music':          () => byId('btn-music-add')?.click(),
-    'confirm-add-music':  () => byId('btn-confirm-add-music')?.click(),
+    'music-batch-manage':    () => toggleBatchManage(),
+    'add-music':             () => toggleAddMusicInput(),
+    'confirm-add-music':     () => confirmAddMusic(),
     'delete-selected-music': () => deleteSelectedSongs(),
     'cancel-music-batch':    () => exitBatchMode(),
-    'add-playlist':          () => byId('btn-music-playlist-add')?.click(),
+    'add-playlist':          () => addPlaylist(),
 
-    /* 首页播放器（HTML 里已有 data-action） */
+    /* 首页播放器 */
     'music-play': () => togglePlay(),
     'music-next': () => playNext(),
     'music-prev': () => playPrev()
