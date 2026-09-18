@@ -1,25 +1,6 @@
 /* ==========================================================================
    梦角 · Dream Corner
    通话模块  js/modules/call.js
-   --------------------------------------------------------------------------
-   覆盖 HTML 中的：
-     #call-modal-overlay   拨出电话弹窗
-       - #call-modal-avatar / #call-modal-name / #call-modal-time
-       - #btn-minimize-call
-     #mini-call            悬浮小窗
-       - #mini-call-avatar / #mini-call-name / #mini-call-time
-       - #btn-hang-up
-     #incoming-overlay     来电弹窗
-       - #incoming-avatar / #incoming-name / #incoming-status
-       - #incoming-time / #incoming-countdown
-       - #btn-accept-call / #btn-reject-call
-
-   状态机：
-     idle
-      ├─→ outgoing  → talking  → minimized ↔ talking → ended
-      └─→ incoming  → (accept) talking / (reject) ended / (timeout) missed
-
-   数据：KEYS.CALL.records 记录每次通话
    ========================================================================== */
 
 import {
@@ -39,7 +20,7 @@ import { bus, on } from '../utils/event.js';
 
 
 /* ==========================================================================
-   01. 常量
+   常量
    ========================================================================== */
 
 /** 来电倒计时秒数 */
@@ -52,7 +33,15 @@ const OUTGOING_WAIT_MAX = 8;
 /** 拨出后对方拒绝的概率 */
 const OUTGOING_REJECT_RATE = 0.15;
 
-/** 通话结束语料（用于聊天里追加一条） */
+/** TA 主动来电：检查间隔（毫秒） */
+const INCOMING_CHECK_INTERVAL = 5 * 60 * 1000;
+
+/** TA 主动来电：冷却时间（防止太频繁） */
+const INCOMING_COOLDOWN = 8 * 60 * 1000;
+
+/** TA 主动来电：触发概率 */
+const INCOMING_PROBABILITY = 0.5;
+
 const CALL_END_LINES = [
     '通话结束，刚刚听到你的声音好开心 ♥',
     '聊得好开心，下次再打给你呀',
@@ -60,7 +49,6 @@ const CALL_END_LINES = [
     '挂啦挂啦，早点休息哦'
 ];
 
-/** TA 拒绝时的理由 */
 const REJECT_LINES = [
     '（对方暂时无法接听）',
     '（对方拒绝了你的通话）',
@@ -69,29 +57,26 @@ const REJECT_LINES = [
 
 
 /* ==========================================================================
-   02. 内部状态
+   内部状态
    ========================================================================== */
 
 let _initialized = false;
 let _unsubs = [];
 
-/** 当前状态 */
-let _state = 'idle';   // idle / outgoing / talking / incoming / minimized
-
-/** 通话开始时间 */
+let _state = 'idle';
 let _callStartAt = 0;
 
-/** 计时器 id */
 let _durationTimer = null;
 let _outgoingWaitTimer = null;
 let _incomingTimer = null;
+let _incomingLoopTimer = null;
 
-/** 来电倒计时剩余秒数 */
 let _incomingCountdown = INCOMING_TIMEOUT;
+let _lastIncomingAt = 0;
 
 
 /* ==========================================================================
-   03. 入口
+   入口
    ========================================================================== */
 
 export function initCall() {
@@ -104,34 +89,31 @@ export function initCall() {
         bus.on('call:start', ({ name }) => startCall(name)),
         bus.on('call:simulate-incoming', () => simulateIncomingCall())
     );
+
+    startIncomingLoop();
 }
 
 export function destroyCall() {
     _unsubs.forEach((off) => off && off());
     _unsubs = [];
+    if (_incomingLoopTimer) clearInterval(_incomingLoopTimer);
+    _incomingLoopTimer = null;
     cleanup();
     _initialized = false;
 }
 
 
 /* ==========================================================================
-   04. 绑定按钮
+   按钮
    ========================================================================== */
 
 function bindButtons() {
-    // 拨出弹窗：最小化
     const minimizeBtn = byId('btn-minimize-call');
-    if (minimizeBtn) {
-        minimizeBtn.addEventListener('click', minimizeCall);
-    }
+    if (minimizeBtn) minimizeBtn.addEventListener('click', minimizeCall);
 
-    // 悬浮小窗：挂断
     const hangupBtn = byId('btn-hang-up');
-    if (hangupBtn) {
-        hangupBtn.addEventListener('click', hangUp);
-    }
+    if (hangupBtn) hangupBtn.addEventListener('click', hangUp);
 
-    // 来电：接听 / 拒绝
     const acceptBtn = byId('btn-accept-call');
     if (acceptBtn) acceptBtn.addEventListener('click', acceptIncoming);
 
@@ -141,13 +123,51 @@ function bindButtons() {
 
 
 /* ==========================================================================
-   05. 拨出电话
+   TA 主动来电循环
+   --------------------------------------------------------------------------
+   每 5 分钟检查一次：
+     - 当前必须 idle
+     - 距离上次来电至少 8 分钟
+     - 50% 概率触发
    ========================================================================== */
 
-/**
- * 发起通话
- * @param {string} [name] 通话对象名字，默认从 profile 取
- */
+export function startIncomingLoop() {
+    if (_incomingLoopTimer) clearInterval(_incomingLoopTimer);
+
+    _incomingLoopTimer = setInterval(() => {
+        if (_state !== 'idle') return;
+
+        const now = Date.now();
+        if (now - _lastIncomingAt < INCOMING_COOLDOWN) return;
+
+        if (Math.random() < INCOMING_PROBABILITY) {
+            _lastIncomingAt = now;
+            simulateIncomingCall();
+        }
+    }, INCOMING_CHECK_INTERVAL);
+
+    // 用户从后台切回页面时，也检查一次（增强"惊喜感"）
+    document.addEventListener('visibilitychange', onVisibilityChange);
+}
+
+function onVisibilityChange() {
+    if (document.visibilityState !== 'visible') return;
+    if (_state !== 'idle') return;
+
+    const now = Date.now();
+    if (now - _lastIncomingAt < INCOMING_COOLDOWN) return;
+
+    if (Math.random() < INCOMING_PROBABILITY) {
+        _lastIncomingAt = now;
+        simulateIncomingCall();
+    }
+}
+
+
+/* ==========================================================================
+   拨出
+   ========================================================================== */
+
 export function startCall(name) {
     if (_state !== 'idle') {
         toast('当前已有通话进行中');
@@ -160,39 +180,29 @@ export function startCall(name) {
     _state = 'outgoing';
     _callStartAt = 0;
 
-    // 更新 UI
     setText(byId('call-modal-name'), taName);
     setText(byId('call-modal-time'), '呼叫中…');
     applyAvatar(byId('call-modal-avatar'), profile.ta.avatar);
 
-    // 显示拨出弹窗
     const overlay = byId('call-modal-overlay');
     if (overlay) {
         overlay.hidden = false;
         overlay.dataset.callState = 'outgoing';
     }
 
-    // 随机决定对方是否接听
     const waitSec = randomInt(OUTGOING_WAIT_MIN, OUTGOING_WAIT_MAX);
     const willReject = Math.random() < OUTGOING_REJECT_RATE;
 
     _outgoingWaitTimer = setTimeout(() => {
         if (_state !== 'outgoing') return;
 
-        if (willReject) {
-            endCall('rejected');
-        } else {
-            // 对方接听
-            startTalking(taName);
-        }
+        if (willReject) endCall('rejected');
+        else startTalking(taName);
     }, waitSec * 1000);
 
     toast(`正在呼叫 ${taName}…`);
 }
 
-/**
- * 从拨出 → 通话中
- */
 function startTalking(taName) {
     _state = 'talking';
     _callStartAt = Date.now();
@@ -201,37 +211,28 @@ function startTalking(taName) {
     if (overlay) overlay.dataset.callState = 'talking';
 
     setText(byId('call-modal-time'), '00:00');
-
-    // 开始计时
     startDurationTimer();
 
     toast(`已接通 ${taName}`);
 }
 
-/**
- * 最小化到悬浮小窗
- */
 export function minimizeCall() {
     if (_state !== 'talking') return;
 
     _state = 'minimized';
 
-    // 隐藏大弹窗
     const overlay = byId('call-modal-overlay');
     if (overlay) overlay.hidden = true;
 
-    // 显示小窗
     const mini = byId('mini-call');
     if (mini) {
         mini.hidden = false;
-
         const profile = get(KEYS.PROFILE);
         setText(byId('mini-call-name'), profile.ta.name || 'TA');
         setText(byId('mini-call-time'), formatDuration(getCurrentDuration()));
         applyAvatar(byId('mini-call-avatar'), profile.ta.avatar);
     }
 
-    // 点击小窗主体 → 恢复大弹窗
     const miniInfo = byId('mini-call-info');
     if (miniInfo) {
         miniInfo.style.cursor = 'pointer';
@@ -244,9 +245,6 @@ export function minimizeCall() {
     }
 }
 
-/**
- * 从悬浮小窗恢复到大弹窗
- */
 function restoreFromMini() {
     if (_state !== 'minimized') return;
     _state = 'talking';
@@ -260,12 +258,9 @@ function restoreFromMini() {
 
 
 /* ==========================================================================
-   06. 挂断 / 结束
+   挂断 / 结束
    ========================================================================== */
 
-/**
- * 挂断（从任何状态都可以调用）
- */
 export function hangUp() {
     if (_state === 'incoming') {
         rejectIncoming();
@@ -275,25 +270,14 @@ export function hangUp() {
     endCall('ended');
 }
 
-/**
- * 结束通话
- * @param {string} reason  'ended' / 'rejected' / 'missed'
- */
 function endCall(reason) {
     const duration = getCurrentDuration();
-
-    // 停止所有计时
     cleanup();
-
-    // 隐藏所有 UI
     hideAllUI();
 
-    // 若通话时长 > 3 秒才记录（避免误触）
     if (reason === 'ended' && duration >= 3) {
         recordCall(duration);
         toast(`通话结束 · 时长 ${formatDuration(duration)}`);
-
-        // 聊天里追加一条提示
         const line = randomPick(CALL_END_LINES);
         bus.emit('chat:system-message', line);
     } else if (reason === 'rejected') {
@@ -308,9 +292,6 @@ function endCall(reason) {
     _callStartAt = 0;
 }
 
-/**
- * 记录一次通话
- */
 function recordCall(duration) {
     const data = get(KEYS.CALL);
     if (!Array.isArray(data.records)) data.records = [];
@@ -323,10 +304,7 @@ function recordCall(duration) {
         ts: Date.now()
     });
 
-    // 只保留最近 100 条
-    if (data.records.length > 100) {
-        data.records = data.records.slice(-100);
-    }
+    if (data.records.length > 100) data.records = data.records.slice(-100);
 
     set(KEYS.CALL, data);
     bus.emit('call:ended', { duration });
@@ -334,12 +312,9 @@ function recordCall(duration) {
 
 
 /* ==========================================================================
-   07. 来电
+   来电
    ========================================================================== */
 
-/**
- * 模拟来电（供 dev 按钮 / bus 触发）
- */
 export function simulateIncomingCall() {
     if (_state !== 'idle') {
         toast('当前已有通话');
@@ -351,22 +326,18 @@ export function simulateIncomingCall() {
 
     const profile = get(KEYS.PROFILE);
 
-    // 更新 UI
     setText(byId('incoming-name'), profile.ta.name || 'TA');
     setText(byId('incoming-status'), '对方来电…');
     setText(byId('incoming-time'), '00:00');
     setText(byId('incoming-countdown'), `${_incomingCountdown} 秒后未接听`);
     applyAvatar(byId('incoming-avatar'), profile.ta.avatar);
 
-    // 显示来电弹窗
     const overlay = byId('incoming-overlay');
     if (overlay) overlay.hidden = false;
 
-    // 倒计时
     _incomingTimer = setInterval(() => {
         _incomingCountdown--;
         if (_incomingCountdown <= 0) {
-            // 超时 → 未接听
             clearInterval(_incomingTimer);
             _incomingTimer = null;
             _state = 'idle';
@@ -381,23 +352,17 @@ export function simulateIncomingCall() {
     toast('来电中…');
 }
 
-/**
- * 接听来电
- */
 function acceptIncoming() {
     if (_state !== 'incoming') return;
 
-    // 停止倒计时
     if (_incomingTimer) {
         clearInterval(_incomingTimer);
         _incomingTimer = null;
     }
 
-    // 隐藏来电弹窗
     const incomingOverlay = byId('incoming-overlay');
     if (incomingOverlay) incomingOverlay.hidden = true;
 
-    // 显示拨出弹窗（复用为"通话中"界面）
     const overlay = byId('call-modal-overlay');
     if (overlay) {
         overlay.hidden = false;
@@ -416,9 +381,6 @@ function acceptIncoming() {
     toast('已接听');
 }
 
-/**
- * 拒绝来电
- */
 function rejectIncoming() {
     if (_state !== 'incoming') return;
 
@@ -433,7 +395,6 @@ function rejectIncoming() {
     _state = 'idle';
     toast('已拒绝');
 
-    // 记录到通话历史
     const data = get(KEYS.CALL);
     if (!Array.isArray(data.records)) data.records = [];
     data.records.push({
@@ -448,7 +409,7 @@ function rejectIncoming() {
 
 
 /* ==========================================================================
-   08. 计时器
+   计时器
    ========================================================================== */
 
 function startDurationTimer() {
@@ -457,11 +418,9 @@ function startDurationTimer() {
     _durationTimer = setInterval(() => {
         const text = formatDuration(getCurrentDuration());
 
-        // 大弹窗
         const bigTime = byId('call-modal-time');
         if (bigTime && _state !== 'outgoing') bigTime.textContent = text;
 
-        // 悬浮小窗
         const miniTime = byId('mini-call-time');
         if (miniTime && _state === 'minimized') miniTime.textContent = text;
     }, 1000);
@@ -472,9 +431,6 @@ function stopDurationTimer() {
     _durationTimer = null;
 }
 
-/**
- * 获取当前通话已持续秒数
- */
 function getCurrentDuration() {
     if (!_callStartAt) return 0;
     return Math.floor((Date.now() - _callStartAt) / 1000);
@@ -482,7 +438,7 @@ function getCurrentDuration() {
 
 
 /* ==========================================================================
-   09. 清理 & UI 控制
+   清理 / UI
    ========================================================================== */
 
 function cleanup() {
@@ -510,7 +466,7 @@ function hideAllUI() {
 
 
 /* ==========================================================================
-   10. 头像应用
+   头像
    ========================================================================== */
 
 function applyAvatar(container, src) {
@@ -539,7 +495,7 @@ function applyAvatar(container, src) {
 
 
 /* ==========================================================================
-   11. 供 app.js 注册的 action 集合
+   actions
    ========================================================================== */
 
 export const callActions = {
@@ -552,10 +508,6 @@ export const callActions = {
 };
 
 
-/* ==========================================================================
-   12. 对外导出
-   ========================================================================== */
-
 export default {
     initCall,
     destroyCall,
@@ -563,5 +515,6 @@ export default {
     hangUp,
     minimizeCall,
     simulateIncomingCall,
+    startIncomingLoop,
     callActions
 };
