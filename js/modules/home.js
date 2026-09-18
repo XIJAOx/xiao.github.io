@@ -683,12 +683,124 @@ function onPeriodUpdate(payload) {
      import { homeActions } from './modules/home.js';
      bindEvents({ actions: { ...homeActions, ...otherActions }, navs: { ... } });
    ========================================================================== */
+/* ==========================================================================
+   纪念日
+   ========================================================================== */
+
+function openAnniversaryModal() {
+    renderAnniversaryList();
+    openModal('modal-anniversary');
+}
+
+function renderAnniversaryList() {
+    const data = get(KEYS.ANNIVERSARY);
+    const items = Array.isArray(data.items) ? data.items : [];
+    const listEl = byId('anniversary-list');
+    const emptyEl = byId('anniversary-empty');
+    if (!listEl) return;
+
+    if (!items.length) {
+        listEl.hidden = true;
+        if (emptyEl) emptyEl.hidden = false;
+        return;
+    }
+
+    if (emptyEl) emptyEl.hidden = true;
+    listEl.hidden = false;
+    listEl.innerHTML = '';
+
+    items.forEach((item) => {
+        const row = document.createElement('div');
+        row.className = 'anniversary-item';
+
+        const info = document.createElement('div');
+
+        const name = document.createElement('div');
+        name.className = 'anniversary-name';
+        name.textContent = item.name || '纪念日';
+
+        const date = document.createElement('div');
+        date.className = 'anniversary-date';
+        date.textContent = item.date || '';
+
+        info.appendChild(name);
+        info.appendChild(date);
+
+        const daysEl = document.createElement('div');
+        daysEl.className = 'anniversary-days';
+        daysEl.textContent = calcAnniversaryDays(item.date);
+
+        row.appendChild(info);
+        row.appendChild(daysEl);
+
+        row.addEventListener('click', () => {
+            if (window.confirm(`删除「${item.name}」？`)) {
+                deleteAnniversary(item.id);
+            }
+        });
+
+        listEl.appendChild(row);
+    });
+}
+
+function calcAnniversaryDays(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    d.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.round((today - d) / 86400000);
+    if (diff === 0) return '今天';
+    if (diff > 0) return `${diff} 天`;
+    return `还有 ${-diff} 天`;
+}
+
+function addAnniversary() {
+    const name = window.prompt('纪念日名称（如：在一起、生日）：', '');
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    const date = window.prompt('日期（格式：2024-05-20）：', '');
+    if (date === null) return;
+    const dateTrimmed = date.trim();
+    if (!/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateTrimmed)) {
+        toast('日期格式不正确');
+        return;
+    }
+
+    const data = get(KEYS.ANNIVERSARY);
+    if (!Array.isArray(data.items)) data.items = [];
+    data.items.push({
+        id: uid('ann'),
+        name: trimmed,
+        date: dateTrimmed,
+        isYearly: true
+    });
+    set(KEYS.ANNIVERSARY, data);
+
+    renderAnniversaryList();
+    toast('已添加');
+}
+
+function deleteAnniversary(id) {
+    const data = get(KEYS.ANNIVERSARY);
+    data.items = (data.items || []).filter((x) => x.id !== id);
+    set(KEYS.ANNIVERSARY, data);
+    renderAnniversaryList();
+    toast('已删除');
+}
 
 export const homeActions = {
     'checkin':            () => doCheckin(),
     'edit-daily-memo':    () => openMemoEditor(),
     'edit-mood':          () => openMoodPicker(),
-    'simulate-incoming-call': () => bus.emit('call:simulate-incoming')
+    'simulate-incoming-call': () => bus.emit('call:simulate-incoming'),
+
+    /* 纪念日 */
+    'open-anniversary': () => openAnniversaryModal(),
+    'add-anniversary':  () => addAnniversary()
 };
 
 
