@@ -135,6 +135,9 @@ export function bindEvents(options = {}) {
     document.addEventListener('change', handleChange, false);
 }
 
+/** 防止 action 处理器内部调用 .click() 导致无限递归 */
+let _lastActionEl = null;
+let _lastActionTime = 0;
 /**
  * 点击事件处理
  */
@@ -144,7 +147,14 @@ function handleClick(event) {
     if (actionEl) {
         const action = actionEl.dataset.action;
 
-        // 未禁用
+        // 防递归：同一元素 50ms 内只处理一次
+        const now = Date.now();
+        if (actionEl === _lastActionEl && now - _lastActionTime < 50) {
+            return;
+        }
+        _lastActionEl = actionEl;
+        _lastActionTime = now;
+
         if (!actionEl.disabled) {
             // 优先执行通用动作
             if (COMMON_ACTIONS[action]) {
@@ -164,7 +174,6 @@ function handleClick(event) {
         if (navFn) navFn(navEl, event);
     }
 }
-
 /**
  * 键盘处理（Enter 触发按钮，Space 交给浏览器）
  */
