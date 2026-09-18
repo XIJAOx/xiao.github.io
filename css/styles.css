@@ -5148,4 +5148,37 @@ select:focus-visible,
     outline-offset: 2px;
 }
 
+/* 首页翻页指示点 */
+.home-pager-dots {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 999px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    z-index: 10;
+}
+
+.home-pager-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 107, 138, 0.28);
+    transition: all 0.24s ease;
+    cursor: pointer;
+}
+
+.home-pager-dot.active {
+    width: 18px;
+    border-radius: 3px;
+    background: var(--c-primary, #ff6b8a);
+}
+
 /* ---------- 22.13 结束 ---------- */
