@@ -1,28 +1,6 @@
 /* ==========================================================================
    梦角 · Dream Corner
    朋友圈模块  js/modules/moments.js
-   --------------------------------------------------------------------------
-   覆盖 HTML 中的：
-     #screen-moments
-       - #header-moments（返回 / 标题 / 访问记录 / 发动态）
-       - #moments-bg（可点击换背景的封面区）
-       - #moments-bg-avatar / #moments-bg-name（封面头像与名字）
-       - #moments-feed（动态列表）
-       - #moments-empty（空状态）
-
-   数据结构（KEYS.MOMENTS）：
-     {
-       posts: [
-         {
-           id, authorId, authorName, authorAvatar,
-           text, images: [], ts,
-           likes: [{ id, name, ts }],
-           comments: [{ id, name, text, ts }]
-         }
-       ],
-       bg: '',          // 背景图 URL / dataURL（空则用默认渐变）
-       visitors: [{ id, name, ts }]
-     }
    ========================================================================== */
 
 import {
@@ -41,26 +19,15 @@ import {
 
 import { bus, on } from '../utils/event.js';
 
+import { mjPrompt, mjConfirm, mjAlert } from '../utils/dialogs.js';
 
-/* ==========================================================================
-   01. 常量
-   ========================================================================== */
 
-/** TA 随机评论/点赞语料 */
 const TA_COMMENTS = [
-    '好可爱呀',
-    '这张照片我好喜欢',
-    '哈哈哈笑死',
-    '嗯嗯，说得对',
-    '想和你一起去',
-    '看到这个就想到你',
-    '今天的你也在发光',
-    '抱抱',
-    '记下来啦',
-    '什么时候带我去'
+    '好可爱呀', '这张照片我好喜欢', '哈哈哈笑死', '嗯嗯，说得对',
+    '想和你一起去', '看到这个就想到你', '今天的你也在发光', '抱抱',
+    '记下来啦', '什么时候带我去'
 ];
 
-/** TA 主动发动态的语料池 */
 const TA_POSTS = [
     '今天的天空很蓝，分享给你。',
     '刚吃完一顿很满足的晚餐。',
@@ -72,13 +39,7 @@ const TA_POSTS = [
     '晚安，做个好梦。'
 ];
 
-/** TA 主动发动态的冷却（毫秒） */
 const TA_POST_COOLDOWN = 3 * 60 * 1000;
-
-
-/* ==========================================================================
-   02. 内部状态
-   ========================================================================== */
 
 let _initialized = false;
 let _unsubs = [];
@@ -87,7 +48,7 @@ let _loopTimer = null;
 
 
 /* ==========================================================================
-   03. 入口
+   入口
    ========================================================================== */
 
 export function initMoments() {
@@ -101,7 +62,6 @@ export function initMoments() {
     renderFeed();
     bindFeedDelegate();
 
-    // 打开朋友圈时记录一次访客
     _unsubs.push(
         bus.on('screen:change', ({ id }) => {
             if (id === 'screen-moments') {
@@ -129,7 +89,7 @@ export function destroyMoments() {
 
 
 /* ==========================================================================
-   04. 数据结构
+   数据
    ========================================================================== */
 
 function ensureMomentsData() {
@@ -143,7 +103,7 @@ function ensureMomentsData() {
 
 
 /* ==========================================================================
-   05. 渲染：封面（背景 + 头像 + 名字）
+   封面
    ========================================================================== */
 
 function renderBg() {
@@ -153,7 +113,6 @@ function renderBg() {
     const data = get(KEYS.MOMENTS);
     const profile = get(KEYS.PROFILE);
 
-    // 背景：有自定义就应用图片，否则用 CSS 默认渐变
     if (bgEl) {
         if (data.bg) {
             bgEl.style.backgroundImage = `url(${data.bg})`;
@@ -166,10 +125,8 @@ function renderBg() {
         }
     }
 
-    // 名字
     if (nameEl) nameEl.textContent = profile.me.name || '我';
 
-    // 头像
     if (avatarEl) {
         const src = profile.me.avatar;
         const oldImg = avatarEl.querySelector('img.mj-avatar-img');
@@ -196,20 +153,7 @@ function renderBg() {
 
 
 /* ==========================================================================
-   06. 渲染：动态列表
-   --------------------------------------------------------------------------
-   CSS 里的结构：
-     .moment-item
-       .moment-avatar
-       .moment-main
-         .moment-name
-         .moment-text
-         .moment-images > img
-         .moment-meta
-           .moment-actions > .moment-action
-         .moment-comments
-           .moment-comment
-             .moment-comment-name
+   渲染动态列表
    ========================================================================== */
 
 function renderFeed() {
@@ -220,7 +164,6 @@ function renderFeed() {
     const data = get(KEYS.MOMENTS);
     const posts = data.posts.slice().sort((a, b) => b.ts - a.ts);
 
-    // 清空，但保留空状态节点
     Array.from(feed.children).forEach((child) => {
         if (child !== emptyEl) child.remove();
     });
@@ -236,33 +179,24 @@ function renderFeed() {
     feed.appendChild(fragment);
 }
 
-/**
- * 创建单条动态 DOM
- * @param {Object} post
- * @returns {HTMLElement}
- */
 function createPostEl(post) {
     const item = document.createElement('article');
     item.className = 'moment-item';
     item.dataset.postId = post.id;
 
-    // 头像
     const avatar = document.createElement('div');
     avatar.className = 'moment-avatar';
     avatar.appendChild(createAvatarContent(post.authorAvatar));
     item.appendChild(avatar);
 
-    // 主体
     const main = document.createElement('div');
     main.className = 'moment-main';
 
-    // 名字
     const nameEl = document.createElement('div');
     nameEl.className = 'moment-name';
     nameEl.textContent = post.authorName || 'TA';
     main.appendChild(nameEl);
 
-    // 正文
     if (post.text) {
         const textEl = document.createElement('p');
         textEl.className = 'moment-text';
@@ -270,7 +204,6 @@ function createPostEl(post) {
         main.appendChild(textEl);
     }
 
-    // 图片
     if (Array.isArray(post.images) && post.images.length) {
         const imagesEl = document.createElement('div');
         imagesEl.className = 'moment-images';
@@ -284,7 +217,6 @@ function createPostEl(post) {
         main.appendChild(imagesEl);
     }
 
-    // 元信息 + 操作
     const meta = document.createElement('div');
     meta.className = 'moment-meta';
 
@@ -296,23 +228,18 @@ function createPostEl(post) {
     const actions = document.createElement('div');
     actions.className = 'moment-actions';
 
-    // 点赞
     const likeBtn = document.createElement('button');
     likeBtn.className = 'moment-action';
     likeBtn.dataset.momentAction = 'like';
-    likeBtn.textContent = post.likes?.length
-        ? `♥ ${post.likes.length}`
-        : '♥ 赞';
+    likeBtn.textContent = post.likes?.length ? `♥ ${post.likes.length}` : '♥ 赞';
     actions.appendChild(likeBtn);
 
-    // 评论
     const commentBtn = document.createElement('button');
     commentBtn.className = 'moment-action';
     commentBtn.dataset.momentAction = 'comment';
     commentBtn.textContent = '💬 评论';
     actions.appendChild(commentBtn);
 
-    // 删除（仅自己的动态）
     if (post.authorId === 'me') {
         const delBtn = document.createElement('button');
         delBtn.className = 'moment-action';
@@ -324,7 +251,6 @@ function createPostEl(post) {
     meta.appendChild(actions);
     main.appendChild(meta);
 
-    // 评论列表
     if (Array.isArray(post.comments) && post.comments.length) {
         const commentsEl = document.createElement('div');
         commentsEl.className = 'moment-comments';
@@ -345,9 +271,6 @@ function createPostEl(post) {
     return item;
 }
 
-/**
- * 头像内容（有图用图，否则回退到 svg）
- */
 function createAvatarContent(src) {
     if (src) {
         const img = document.createElement('img');
@@ -366,17 +289,14 @@ function createAvatarContent(src) {
     svg.style.height = '100%';
     svg.style.padding = '8px';
     const path = document.createElementNS(svgNS, 'path');
-    path.setAttribute(
-        'd',
-        'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'
-    );
+    path.setAttribute('d', 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z');
     svg.appendChild(path);
     return svg;
 }
 
 
 /* ==========================================================================
-   07. 动态列表事件（点赞 / 评论 / 删除）
+   动态列表事件
    ========================================================================== */
 
 function bindFeedDelegate() {
@@ -391,15 +311,12 @@ function bindFeedDelegate() {
         const postId = item.dataset.postId;
 
         const action = btn.dataset.momentAction;
-        if (action === 'like')   doLike(postId);
+        if (action === 'like')         doLike(postId);
         else if (action === 'comment') doComment(postId);
         else if (action === 'delete')  doDelete(postId);
     });
 }
 
-/**
- * 点赞 / 取消点赞
- */
 function doLike(postId) {
     const data = get(KEYS.MOMENTS);
     const post = data.posts.find((p) => p.id === postId);
@@ -410,27 +327,24 @@ function doLike(postId) {
     const myId = 'me';
 
     const idx = post.likes.findIndex((l) => l.id === myId);
-    if (idx === -1) {
-        post.likes.push({ id: myId, name: myName, ts: Date.now() });
-    } else {
-        post.likes.splice(idx, 1);
-    }
+    if (idx === -1) post.likes.push({ id: myId, name: myName, ts: Date.now() });
+    else post.likes.splice(idx, 1);
 
     set(KEYS.MOMENTS, data);
     renderFeed();
 }
 
-/**
- * 评论
- */
-function doComment(postId) {
+async function doComment(postId) {
     const data = get(KEYS.MOMENTS);
     const post = data.posts.find((p) => p.id === postId);
     if (!post) return;
 
-    const text = window.prompt('评论：', '');
+    const text = await mjPrompt('评论', {
+        placeholder: '说点什么…',
+        confirmText: '发送'
+    });
     if (text === null) return;
-    const trimmed = text.trim();
+    const trimmed = String(text).trim();
     if (!trimmed) return;
 
     post.comments = Array.isArray(post.comments) ? post.comments : [];
@@ -443,7 +357,6 @@ function doComment(postId) {
     set(KEYS.MOMENTS, data);
     renderFeed();
 
-    // TA 概率性回复
     if (Math.random() < 0.7) {
         setTimeout(() => {
             const d2 = get(KEYS.MOMENTS);
@@ -462,14 +375,13 @@ function doComment(postId) {
     }
 }
 
-/**
- * 删除动态（仅自己）
- */
-function doDelete(postId) {
+async function doDelete(postId) {
     const data = get(KEYS.MOMENTS);
     const post = data.posts.find((p) => p.id === postId);
     if (!post || post.authorId !== 'me') return;
-    if (!window.confirm('删除这条动态？')) return;
+
+    const ok = await mjConfirm('删除这条动态？', { title: '删除动态' });
+    if (!ok) return;
 
     data.posts = data.posts.filter((p) => p.id !== postId);
     set(KEYS.MOMENTS, data);
@@ -479,7 +391,7 @@ function doDelete(postId) {
 
 
 /* ==========================================================================
-   08. 封面（点击换背景）
+   封面
    ========================================================================== */
 
 function bindBg() {
@@ -506,16 +418,16 @@ function bindBg() {
         input.click();
     });
 
-    // 长按 → 恢复默认背景
     let pressTimer = null;
     bg.addEventListener('touchstart', () => {
-        pressTimer = setTimeout(() => {
-            if (window.confirm('恢复默认背景？')) {
-                const data = get(KEYS.MOMENTS);
-                data.bg = '';
-                set(KEYS.MOMENTS, data);
-                renderBg();
-            }
+        pressTimer = setTimeout(async () => {
+            const ok = await mjConfirm('恢复默认背景？', { title: '更换背景' });
+            if (!ok) return;
+            const data = get(KEYS.MOMENTS);
+            data.bg = '';
+            set(KEYS.MOMENTS, data);
+            renderBg();
+            toast('已恢复默认');
         }, 700);
     }, { passive: true });
     const cancel = () => { if (pressTimer) clearTimeout(pressTimer); pressTimer = null; };
@@ -526,7 +438,7 @@ function bindBg() {
 
 
 /* ==========================================================================
-   09. 头部按钮（发动态 / 访客记录）
+   头部按钮
    ========================================================================== */
 
 function bindHeaderButtons() {
@@ -539,9 +451,7 @@ function bindHeaderButtons() {
 
 
 /* ==========================================================================
-   10. 发布动态面板
-   --------------------------------------------------------------------------
-   复用 .question-create-panel 样式做底部弹层
+   发布动态
    ========================================================================== */
 
 let _postPanelEl = null;
@@ -554,13 +464,11 @@ function openPostPanel() {
     }
     _postPanelEl.hidden = false;
 
-    // 清空
     const textEl = _postPanelEl.querySelector('#moment-post-text');
     const imgsEl = _postPanelEl.querySelector('#moment-post-preview');
     if (textEl) textEl.value = '';
     if (imgsEl) imgsEl.innerHTML = '';
 
-    // 暂存已选图片
     _postPanelEl._images = [];
 }
 
@@ -597,7 +505,6 @@ function createPostPanel() {
         </div>
     `;
 
-    // 事件
     panel.addEventListener('click', (e) => {
         if (e.target.closest('[data-moment-post-close]')) {
             panel.hidden = true;
@@ -628,7 +535,6 @@ function pickImages(panel) {
         const preview = panel.querySelector('#moment-post-preview');
         if (!preview) return;
 
-        let remaining = files.length;
         files.forEach((file) => {
             const reader = new FileReader();
             reader.onload = () => {
@@ -642,10 +548,6 @@ function pickImages(panel) {
                 img.style.objectFit = 'cover';
                 img.style.borderRadius = '8px';
                 preview.appendChild(img);
-
-                if (--remaining === 0) {
-                    // 全部处理完成
-                }
             };
             reader.readAsDataURL(file);
         });
@@ -683,28 +585,25 @@ function submitPost(panel) {
     renderFeed();
     toast('已发布');
 
-    // 触发 TA 点赞/评论
     scheduleTaInteraction(post.id);
     bus.emit('moments:new', post);
 }
 
 
 /* ==========================================================================
-   11. TA 交互（点赞 / 评论 / 转发朋友圈）
+   TA 交互
    ========================================================================== */
 
 function scheduleTaInteraction(postId) {
-    // 60% 概率点赞
     if (Math.random() < 0.7) {
         setTimeout(() => {
             const data = get(KEYS.MOMENTS);
             const post = data.posts.find((p) => p.id === postId);
             if (!post) return;
             post.likes = post.likes || [];
-            const taId = 'ta';
-            if (!post.likes.find((l) => l.id === taId)) {
+            if (!post.likes.find((l) => l.id === 'ta')) {
                 post.likes.push({
-                    id: taId,
+                    id: 'ta',
                     name: get(KEYS.PROFILE).ta.name || 'TA',
                     ts: Date.now()
                 });
@@ -714,7 +613,6 @@ function scheduleTaInteraction(postId) {
         }, randomInt(2000, 6000));
     }
 
-    // 50% 概率评论
     if (Math.random() < 0.5) {
         setTimeout(() => {
             const data = get(KEYS.MOMENTS);
@@ -735,12 +633,9 @@ function scheduleTaInteraction(postId) {
 
 
 /* ==========================================================================
-   12. 访客记录
+   访客
    ========================================================================== */
 
-/**
- * 记录一次我的访问
- */
 function recordMyVisit() {
     const data = get(KEYS.MOMENTS);
     data.visitors = Array.isArray(data.visitors) ? data.visitors : [];
@@ -749,13 +644,9 @@ function recordMyVisit() {
         name: get(KEYS.PROFILE).me.name || '我',
         ts: Date.now()
     });
-    // 只保留最近 100 条
-    if (data.visitors.length > 100) {
-        data.visitors = data.visitors.slice(-100);
-    }
+    if (data.visitors.length > 100) data.visitors = data.visitors.slice(-100);
     set(KEYS.MOMENTS, data);
 
-    // 偶尔"TA"也来访问
     if (Math.random() < 0.35) {
         setTimeout(() => {
             const d = get(KEYS.MOMENTS);
@@ -769,10 +660,7 @@ function recordMyVisit() {
     }
 }
 
-/**
- * 显示访客记录
- */
-function showVisitors() {
+async function showVisitors() {
     const data = get(KEYS.MOMENTS);
     const visitors = (data.visitors || []).slice().reverse();
 
@@ -781,29 +669,22 @@ function showVisitors() {
         return;
     }
 
-    // 简单的文本弹窗
     const lines = visitors.slice(0, 15)
         .map((v) => `${v.name} · ${formatChatTime(v.ts)}`)
         .join('\n');
-    window.alert(`最近访客：\n\n${lines}`);
+
+    await mjAlert(lines, { title: '最近访客' });
 }
 
 
 /* ==========================================================================
-   13. TA 主动发朋友圈
+   TA 主动发动态
    ========================================================================== */
 
-/**
- * 生成一条 TA 的动态
- */
 export function createTaPost() {
     const profile = get(KEYS.PROFILE);
     const data = get(KEYS.MOMENTS);
-    const settings = get(KEYS.SETTINGS);
-    const cfg = settings.moments || {};
 
-    // 是否让 TA 主动发（沿用已有的开关逻辑，默认为开）
-    // 这里简单地按随机概率触发，不做强制限制
     const post = {
         id: uid('post'),
         authorId: 'ta',
@@ -821,16 +702,11 @@ export function createTaPost() {
     return post;
 }
 
-/**
- * 启动一个后台循环：每 3 分钟检查一次是否让 TA 发动态
- */
 function startTaPostLoop() {
     if (_loopTimer) clearInterval(_loopTimer);
-
     _loopTimer = setInterval(() => {
         const now = Date.now();
         if (now - _lastTaPostAt < TA_POST_COOLDOWN) return;
-        // 约 6% 概率发
         if (Math.random() < 0.06) {
             _lastTaPostAt = now;
             createTaPost();
@@ -840,7 +716,7 @@ function startTaPostLoop() {
 
 
 /* ==========================================================================
-   14. 供 app.js 注册的 action / nav 集合
+   actions / navs
    ========================================================================== */
 
 export const momentsActions = {
@@ -857,11 +733,6 @@ export const momentsNavs = {
         showScreen('screen-moments');
     }
 };
-
-
-/* ==========================================================================
-   15. 对外导出
-   ========================================================================== */
 
 export default {
     initMoments,
