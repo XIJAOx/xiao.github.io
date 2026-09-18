@@ -747,17 +747,14 @@ function bindPlaylistAdd() {
    ========================================================================== */
 
 function bindBatchManage() {
-    const btn = byId('btn-music-batch-manage');
-    const delBtn = byId('btn-music-batch-delete');
-    const cancelBtn = byId('btn-music-batch-cancel');
+function bindBatchManage() {
+    // 全部按钮走 data-action，无需在此绑定
+}
 
-    if (btn) {
-        btn.addEventListener('click', () => {
-            if (_batchMode) exitBatchMode();
-            else enterBatchMode();
-        });
-    }
-
+function toggleBatchManage() {
+    if (_batchMode) exitBatchMode();
+    else enterBatchMode();
+          }
     if (delBtn) delBtn.addEventListener('click', deleteSelectedSongs);
     if (cancelBtn) cancelBtn.addEventListener('click', exitBatchMode);
 }
