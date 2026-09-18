@@ -1,33 +1,6 @@
 /* ==========================================================================
    梦角 · Dream Corner
    提问模块  js/modules/questions.js
-   --------------------------------------------------------------------------
-   覆盖 HTML 中的：
-     #screen-questions
-       - #question-tabs（我的提问 / TA 的提问）
-       - #btn-questions-add（新建提问）
-       - #question-list（列表）
-       - #question-empty（空状态）
-       - #question-note（底部说明）
-       - #question-create-panel（底部弹层）
-         - #btn-question-create-close
-         - #question-create-body（动态题目列表）
-         - #btn-question-add-item / #btn-question-save
-
-   数据结构（KEYS.QUESTIONS）：
-     {
-       my: [
-         {
-           id, items: [{ text, type }], ts, status,
-           answers: [[...], [...]],   // 每题答案（单选是 [i]，多选是 [i,j]）
-           answeredAt
-         }
-       ],
-       ta: [ 同上 ]
-     }
-
-     type: 'single' | 'multiple'
-     status: 'pending' | 'answered'
    ========================================================================== */
 
 import {
@@ -46,47 +19,32 @@ import {
 
 import { bus, on } from '../utils/event.js';
 
+import { mjPrompt, mjConfirm, mjAlert } from '../utils/dialogs.js';
 
-/* ==========================================================================
-   01. 常量
-   ========================================================================== */
 
 const TABS = {
-    MY: 'my',   // 我的提问（我发起，TA 回答）
-    TA: 'ta'    // TA 的提问（TA 发起，我回答）
+    MY: 'my',
+    TA: 'ta'
 };
 
-/** 单次提问最多题目数 */
 const MAX_QUESTIONS = 10;
 
-/** 单选/多选的默认选项（用于 TA 回答时模拟） */
 const DEFAULT_OPTIONS = ['是', '否', '不确定'];
 
-/** 模拟 TA 回答时的通用选项池 */
-const TA_OPTION_POOL = [
-    ['会', '不会', '看情况'],
-    ['喜欢', '一般', '不喜欢'],
-    ['经常', '偶尔', '从不'],
-    ['当然', '也许吧', '不太想'],
-    ['开心', '平静', '难过'],
-    ['听你的', '听我的', '商量一下']
+const TA_COMMENTS = [
+    '好可爱呀', '这张照片我好喜欢', '哈哈哈笑死', '嗯嗯，说得对',
+    '想和你一起去', '看到这个就想到你', '今天的你也在发光', '抱抱',
+    '记下来啦', '什么时候带我去'
 ];
-
-
-/* ==========================================================================
-   02. 内部状态
-   ========================================================================== */
 
 let _initialized = false;
 let _unsubs = [];
 let _currentTab = TABS.MY;
-
-/** 新建面板里当前题目数量（控制 id 递增） */
 let _createItemCount = 1;
 
 
 /* ==========================================================================
-   03. 入口
+   入口
    ========================================================================== */
 
 export function initQuestions() {
@@ -95,16 +53,13 @@ export function initQuestions() {
 
     ensureQuestionsData();
     bindTabs();
-    bindAddButton();
-    bindCreatePanel();
+    bindCreatePanelInputs();
 
     renderCurrentTab();
 
     _unsubs.push(
         bus.on('screen:change', ({ id }) => {
-            if (id === 'screen-questions') {
-                renderCurrentTab();
-            }
+            if (id === 'screen-questions') renderCurrentTab();
         })
     );
 }
@@ -117,7 +72,7 @@ export function destroyQuestions() {
 
 
 /* ==========================================================================
-   04. 数据结构
+   数据
    ========================================================================== */
 
 function ensureQuestionsData() {
@@ -125,7 +80,6 @@ function ensureQuestionsData() {
     if (!Array.isArray(data.my)) data.my = [];
     if (!Array.isArray(data.ta)) data.ta = [];
 
-    // 首次给 TA 填充一条示例，便于展示
     if (data.ta.length === 0 && data.my.length === 0) {
         data.ta.push({
             id: uid('q'),
@@ -157,7 +111,7 @@ function saveList(tab, list) {
 
 
 /* ==========================================================================
-   05. Tab 切换
+   Tab 切换
    ========================================================================== */
 
 function bindTabs() {
@@ -189,12 +143,7 @@ export function switchTab(tab) {
 
 
 /* ==========================================================================
-   06. 渲染列表
-   --------------------------------------------------------------------------
-   DOM 结构对齐 CSS：
-     .question-item
-       .question-item-title
-       .question-item-sub
+   渲染列表
    ========================================================================== */
 
 function renderCurrentTab() {
@@ -204,7 +153,6 @@ function renderCurrentTab() {
 
     const list = getList(_currentTab).slice().sort((a, b) => b.ts - a.ts);
 
-    // 清空（保留空状态）
     Array.from(wrap.children).forEach((child) => {
         if (child !== empty) child.remove();
     });
@@ -231,22 +179,16 @@ function renderCurrentTab() {
 function updateNote() {
     const note = byId('question-note');
     if (!note) return;
-    if (_currentTab === TABS.MY) {
-        note.textContent = '你发起的提问。一次提问可以包含至少 1 个问题，数量不限。';
-    } else {
-        note.textContent = 'TA 的提问。点击卡片可以回答。';
-    }
+    note.textContent = _currentTab === TABS.MY
+        ? '你发起的提问。一次提问可以包含至少 1 个问题，数量不限。'
+        : 'TA 的提问。点击卡片可以回答。';
 }
 
-/**
- * 创建单条提问卡片
- */
 function createQuestionEl(q) {
     const item = document.createElement('div');
     item.className = 'question-item';
     item.dataset.questionId = q.id;
 
-    // 标题：第一题内容 + 额外数量
     const title = document.createElement('div');
     title.className = 'question-item-title';
     const first = q.items[0]?.text || '未命名';
@@ -255,7 +197,6 @@ function createQuestionEl(q) {
         : first;
     item.appendChild(title);
 
-    // 副信息：时间 + 状态
     const sub = document.createElement('div');
     sub.className = 'question-item-sub';
     const timeStr = formatChatTime(q.ts);
@@ -268,16 +209,11 @@ function createQuestionEl(q) {
     sub.textContent = `${timeStr} ${statusStr}`;
     item.appendChild(sub);
 
-    // 点击
     item.addEventListener('click', () => {
-        if (_currentTab === TABS.MY) {
-            viewMyQuestion(q);
-        } else {
-            answerTaQuestion(q);
-        }
+        if (_currentTab === TABS.MY) viewMyQuestion(q);
+        else answerTaQuestion(q);
     });
 
-    // 长按删除
     attachLongPressDelete(item, q);
 
     return item;
@@ -285,37 +221,37 @@ function createQuestionEl(q) {
 
 
 /* ==========================================================================
-   07. 查看我发起的提问
+   查看我发起的
    ========================================================================== */
 
-function viewMyQuestion(q) {
+async function viewMyQuestion(q) {
     if (q.status !== 'answered') {
-        const choice = window.prompt(
-            '这条提问还没有回答。\n\n1. 催一催 TA\n2. 删除提问',
-            '1'
-        );
+        const choice = await mjPrompt('这条提问还没有回答', {
+            placeholder: '1. 催一催 TA\n2. 删除提问',
+            defaultValue: '1',
+            confirmText: '执行'
+        });
         if (choice === null) return;
-        const n = parseInt(choice, 10);
+        const n = parseInt(String(choice).trim(), 10);
         if (n === 1) urgeTaAnswer(q);
-        else if (n === 2) deleteQuestion(q.id);
+        else if (n === 2) {
+            const ok = await mjConfirm('删除这条提问？', { title: '删除提问' });
+            if (ok) deleteQuestion(q.id);
+        }
         return;
     }
 
-    // 已回答 → 展示明细
     const lines = q.items.map((item, i) => {
         const ans = (q.answers && q.answers[i]) || [];
         const ansText = ans.length
-            ? ans.map((idx) => item.text ? `选项 ${idx + 1}` : '').join('、')
+            ? ans.map((idx) => DEFAULT_OPTIONS[idx] || `选项 ${idx + 1}`).join('、')
             : '未回答';
         return `${i + 1}. ${item.text}\n   → ${ansText}`;
     }).join('\n\n');
 
-    window.alert(`TA 的回答：\n\n${lines}`);
+    await mjAlert(lines, { title: 'TA 的回答' });
 }
 
-/**
- * 模拟 TA 回答
- */
 function urgeTaAnswer(q) {
     const delay = randomInt(1500, 3500);
     toast('已提醒 TA，请稍候…');
@@ -325,16 +261,13 @@ function urgeTaAnswer(q) {
         const target = data.my.find((x) => x.id === q.id);
         if (!target) return;
 
-        // 生成随机答案
         target.answers = target.items.map((it) => {
             if (it.type === 'multiple') {
-                // 多选：随机 1~3 项
-                const maxIdx = randomInt(2, 3);
+                const maxIdx = randomInt(1, 2);
                 const picks = [];
                 for (let i = 0; i <= maxIdx; i++) picks.push(i);
                 return picks;
             }
-            // 单选：随机一个
             return [randomInt(0, 2)];
         });
         target.status = 'answered';
@@ -344,22 +277,19 @@ function urgeTaAnswer(q) {
         renderCurrentTab();
         toast('TA 回答了你！');
         bus.emit('question:answered', { id: q.id });
-
-        // 通知聊天模块推一条消息
-        bus.emit('chat:system-message', '我回答完了你的问题，去看看？');
     }, delay);
 }
 
 
 /* ==========================================================================
-   08. 回答 TA 的提问
+   回答 TA 的提问
    ========================================================================== */
 
 let _answerPanelEl = null;
 
 function answerTaQuestion(q) {
     if (q.status === 'answered') {
-        window.alert('你已经回答过这条提问了。');
+        mjAlert('你已经回答过这条提问了。', { title: '提示' });
         return;
     }
 
@@ -373,13 +303,6 @@ function answerTaQuestion(q) {
     _answerPanelEl.hidden = false;
 
     renderAnswerBody(q);
-
-    // 保存
-    const saveBtn = _answerPanelEl.querySelector('[data-answer-save]');
-    // 先移除旧的监听（用 clone 替换的方式清空）
-    const newSaveBtn = saveBtn.cloneNode(true);
-    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
-    newSaveBtn.addEventListener('click', () => submitAnswer(q));
 }
 
 function createAnswerPanel() {
@@ -402,15 +325,19 @@ function createAnswerPanel() {
     panel.addEventListener('click', (e) => {
         if (e.target.closest('[data-answer-close]')) {
             panel.hidden = true;
+            return;
+        }
+        if (e.target.closest('[data-answer-save]')) {
+            const qid = panel.dataset.questionId;
+            const data = get(KEYS.QUESTIONS);
+            const q = data.ta.find((x) => x.id === qid);
+            if (q) submitAnswer(q, panel);
         }
     });
 
     return panel;
 }
 
-/**
- * 渲染回答表单
- */
 function renderAnswerBody(q) {
     const body = _answerPanelEl.querySelector('#question-answer-body');
     if (!body) return;
@@ -430,12 +357,10 @@ function renderAnswerBody(q) {
         typeHint.textContent = item.type === 'multiple' ? '（多选）' : '（单选）';
         wrap.appendChild(typeHint);
 
-        // 生成选项（暂时用默认通用选项）
-        const options = DEFAULT_OPTIONS;
         const inputType = item.type === 'multiple' ? 'checkbox' : 'radio';
         const groupName = `q_${qIdx}`;
 
-        options.forEach((opt, oIdx) => {
+        DEFAULT_OPTIONS.forEach((opt, oIdx) => {
             const row = document.createElement('label');
             row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px;color:var(--c-text-1);';
 
@@ -457,27 +382,21 @@ function renderAnswerBody(q) {
     });
 }
 
-/**
- * 提交回答
- */
-function submitAnswer(q) {
-    const body = _answerPanelEl.querySelector('#question-answer-body');
+function submitAnswer(q, panel) {
+    const body = panel.querySelector('#question-answer-body');
     if (!body) return;
 
-    // 收集答案
     const answers = q.items.map((_, qIdx) => {
         const inputs = body.querySelectorAll(`input[data-qidx="${qIdx}"]:checked`);
         return Array.from(inputs).map((i) => parseInt(i.value, 10));
     });
 
-    // 校验：每题至少选 1 项
     const emptyIdx = answers.findIndex((a) => a.length === 0);
     if (emptyIdx !== -1) {
         toast(`第 ${emptyIdx + 1} 题还没选答案`);
         return;
     }
 
-    // 保存
     const data = get(KEYS.QUESTIONS);
     const target = data.ta.find((x) => x.id === q.id);
     if (!target) return;
@@ -487,7 +406,7 @@ function submitAnswer(q) {
     target.answeredAt = Date.now();
     set(KEYS.QUESTIONS, data);
 
-    _answerPanelEl.hidden = true;
+    panel.hidden = true;
     renderCurrentTab();
     toast('已提交，TA 会看到的 ♥');
     bus.emit('question:answered', { id: q.id });
@@ -495,35 +414,14 @@ function submitAnswer(q) {
 
 
 /* ==========================================================================
-   09. 新建提问
+   新建提问面板
    ========================================================================== */
 
-function bindAddButton() {
-    const btn = byId('btn-questions-add');
-    if (!btn) return;
-    btn.addEventListener('click', openCreatePanel);
+function bindCreatePanelInputs() {
+    // 输入框回车也保留（可选）
+    // 其余按钮全部通过 data-action 分发
 }
 
-function bindCreatePanel() {
-    const panel = byId('question-create-panel');
-    if (!panel) return;
-
-    // 关闭
-    const closeBtn = byId('btn-question-create-close');
-    if (closeBtn) closeBtn.addEventListener('click', closeCreatePanel);
-
-    // 添加问题
-    const addBtn = byId('btn-question-add-item');
-    if (addBtn) addBtn.addEventListener('click', addCreateItem);
-
-    // 保存
-    const saveBtn = byId('btn-question-save');
-    if (saveBtn) saveBtn.addEventListener('click', submitCreate);
-}
-
-/**
- * 打开新建面板
- */
 export function openCreatePanel() {
     const panel = byId('question-create-panel');
     if (!panel) return;
@@ -531,28 +429,20 @@ export function openCreatePanel() {
     resetCreatePanel();
     panel.hidden = false;
 
-    // 聚焦第一个输入框
     setTimeout(() => {
         byId('question-input-1')?.focus();
     }, 200);
 }
 
-/**
- * 关闭新建面板
- */
-function closeCreatePanel() {
+export function closeCreatePanel() {
     const panel = byId('question-create-panel');
     if (panel) panel.hidden = true;
 }
 
-/**
- * 重置面板到初始状态（只有一道题）
- */
 function resetCreatePanel() {
     const body = byId('question-create-body');
     if (!body) return;
 
-    // 保留第一题，删除其它
     const items = body.querySelectorAll('.question-create-item');
     items.forEach((item, i) => {
         if (i > 0) item.remove();
@@ -569,10 +459,7 @@ function resetCreatePanel() {
     _createItemCount = 1;
 }
 
-/**
- * 添加一道题
- */
-function addCreateItem() {
+export function addCreateItem() {
     if (_createItemCount >= MAX_QUESTIONS) {
         toast(`最多 ${MAX_QUESTIONS} 道题`);
         return;
@@ -598,20 +485,15 @@ function addCreateItem() {
     `;
     body.appendChild(item);
 
-    // 聚焦
     setTimeout(() => {
         document.getElementById(`question-input-${idx}`)?.focus();
     }, 50);
 }
 
-/**
- * 保存新建的提问
- */
-function submitCreate() {
+export function saveQuestion() {
     const body = byId('question-create-body');
     if (!body) return;
 
-    // 收集题目
     const items = [];
     for (let i = 1; i <= _createItemCount; i++) {
         const input = document.getElementById(`question-input-${i}`);
@@ -630,7 +512,6 @@ function submitCreate() {
         return;
     }
 
-    // 保存
     const data = get(KEYS.QUESTIONS);
     data.my.push({
         id: uid('q'),
@@ -650,17 +531,16 @@ function submitCreate() {
 
 
 /* ==========================================================================
-   10. 删除
+   长按删除
    ========================================================================== */
 
 function attachLongPressDelete(el, q) {
     let timer = null;
 
     const start = () => {
-        timer = setTimeout(() => {
-            if (window.confirm('删除这条提问？')) {
-                deleteQuestion(q.id);
-            }
+        timer = setTimeout(async () => {
+            const ok = await mjConfirm('删除这条提问？', { title: '删除提问' });
+            if (ok) deleteQuestion(q.id);
         }, 700);
     };
     const cancel = () => {
@@ -673,12 +553,11 @@ function attachLongPressDelete(el, q) {
     el.addEventListener('touchmove', cancel);
     el.addEventListener('touchcancel', cancel);
 
-    el.addEventListener('contextmenu', (e) => {
+    el.addEventListener('contextmenu', async (e) => {
         e.preventDefault();
         cancel();
-        if (window.confirm('删除这条提问？')) {
-            deleteQuestion(q.id);
-        }
+        const ok = await mjConfirm('删除这条提问？', { title: '删除提问' });
+        if (ok) deleteQuestion(q.id);
     });
 }
 
@@ -691,14 +570,14 @@ function deleteQuestion(id) {
 
 
 /* ==========================================================================
-   11. 供 app.js 注册的 action / nav 集合
+   actions / navs
    ========================================================================== */
 
 export const questionsActions = {
-    'add-question':           () => openCreatePanel(),
-    'close-question-create':  () => closeCreatePanel(),
-    'add-question-item':      () => addCreateItem(),
-    'save-question':          () => submitCreate()
+    'add-question':          () => openCreatePanel(),
+    'close-question-create': () => closeCreatePanel(),
+    'add-question-item':     () => addCreateItem(),
+    'save-question':         () => saveQuestion()
 };
 
 export const questionsNavs = {
@@ -708,11 +587,6 @@ export const questionsNavs = {
         showScreen('screen-questions');
     }
 };
-
-
-/* ==========================================================================
-   12. 对外导出
-   ========================================================================== */
 
 export default {
     initQuestions,
