@@ -443,6 +443,20 @@ export function getCheck(target) {
 }
 
 /**
+ * 按 id 切换勾选状态（供 event.js 使用）
+ * @param {string} id
+ * @returns {boolean}  切换后的状态
+ */
+export function toggleCheckById(id) {
+    const el = byId(id);
+    if (!el) return false;
+    const next = !el.classList.contains('checked');
+    el.classList.toggle('checked', next);
+    el.textContent = next ? '✓' : '';
+    return next;
+}
+
+/**
  * 分组单选：一组 [data-mode] / [data-shape] 类按钮
  * @param {Element[]|NodeList} group
  * @param {Element} activeEl
