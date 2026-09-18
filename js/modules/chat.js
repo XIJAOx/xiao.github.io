@@ -1,24 +1,6 @@
 /* ==========================================================================
    梦角 · Dream Corner
    聊天模块  js/modules/chat.js
-   --------------------------------------------------------------------------
-   覆盖 HTML 中的：
-     #screen-chat-list    聊天列表
-     #screen-chat         聊天页
-     #screen-chat-info    聊天信息页
-     弹窗：
-       #modal-bg         聊天背景
-       #modal-bubble     气泡
-       #modal-text       文字
-       #modal-avatar     头像
-       #modal-timestamp  时间戳 / 已读
-       #modal-data       聊天数据（导出/导入/删除）
-       #modal-group-chat 发起群聊
-   --------------------------------------------------------------------------
-   依赖：
-     utils/dom     DOM 操作与格式化
-     utils/storage 持久化
-     utils/event   事件总线
    ========================================================================== */
 
 import {
@@ -41,56 +23,37 @@ import {
 
 import { bus, on, delegate } from '../utils/event.js';
 
+import { mjPrompt, mjConfirm, mjAlert } from '../utils/dialogs.js';
 
-/* ==========================================================================
-   01. 常量
-   ========================================================================== */
 
-/** 当前聊天对象 id（以后支持多角色再扩展） */
 const CHAT_ID = 'ta';
-
-/** 聊天页容器里用来标记"已渲染"的属性 */
 const RENDERED_FLAG = 'data-rendered';
-
-/** TA 主动发消息的冷却（毫秒），避免刷屏 */
 const PROACTIVE_COOLDOWN = 60 * 1000;
-
-/** 默认气泡色（用于取反色文本） */
 const DEFAULT_BUBBLE_COLOR = '#000';
-
-
-/* ==========================================================================
-   02. 内部状态
-   ========================================================================== */
 
 let _initialized = false;
 let _unsubs = [];
-let _replyTimers = [];       // 自动回复的 setTimeout id 集合
-let _lastProactiveAt = 0;    // 上次 TA 主动发消息时间
-let _inChatScreen = false;   // 是否在聊天页
+let _replyTimers = [];
+let _lastProactiveAt = 0;
+let _inChatScreen = false;
 
 
 /* ==========================================================================
-   03. 入口：initChat
+   入口
    ========================================================================== */
 
 export function initChat() {
     if (_initialized) return;
     _initialized = true;
 
-    // 确保聊天数据结构完整
     ensureChatData();
-
-    // 渲染
     applyAppearance();
     renderChatHeader();
     renderChatListPreview();
     renderChatMessages();
     bindInput();
-    bindChatListClick();
     bindSettingsModals();
 
-    // 订阅
     _unsubs.push(
         bus.on('profile:update', () => {
             renderChatHeader();
@@ -100,10 +63,15 @@ export function initChat() {
         bus.on('screen:change', ({ id }) => {
             _inChatScreen = id === 'screen-chat';
             if (_inChatScreen) {
-                // 进入聊天页时把未读清掉
                 markAllRead();
                 scrollChatToBottom(false);
             }
+        }),
+        bus.on('chat:system-message', (text) => {
+            if (text) appendMessage({ role: 'me', type: 'text', content: text });
+        }),
+        bus.on('chat:ta-message', (text) => {
+            if (text) appendMessage({ role: 'ta', type: 'text', content: text });
         })
     );
 }
@@ -118,22 +86,9 @@ export function destroyChat() {
 
 
 /* ==========================================================================
-   04. 数据结构
+   数据
    ========================================================================== */
 
-/**
- * 结构：
- *   {
- *     ta: {
- *       messages: [
- *         { id, role:'me'|'ta', type:'text'|'image'|'voice',
- *           content, ts, read }
- *       ],
- *       lastReadTs: number,
- *       draft: ''
- *     }
- *   }
- */
 function ensureChatData() {
     const chat = get(KEYS.CHAT);
     if (!chat[CHAT_ID]) {
@@ -173,12 +128,7 @@ function markAllRead() {
 
 
 /* ==========================================================================
-   05. 渲染：聊天列表预览
-   --------------------------------------------------------------------------
-   HTML：
-     #chat-list-last-msg
-     #chat-list-time-ta
-     #chat-list-unread-ta
+   渲染：聊天列表预览
    ========================================================================== */
 
 export function renderChatListPreview() {
@@ -188,30 +138,21 @@ export function renderChatListPreview() {
     const unreadEl = byId('chat-list-unread-ta');
 
     if (msgEl) {
-        if (!last) {
-            msgEl.textContent = '还没有对话哦';
-        } else if (last.type === 'image') {
-            msgEl.textContent = '[图片]';
-        } else if (last.type === 'voice') {
-            msgEl.textContent = '[语音]';
-        } else {
-            msgEl.textContent = last.content || '';
-        }
+        if (!last) msgEl.textContent = '还没有对话哦';
+        else if (last.type === 'image') msgEl.textContent = '[图片]';
+        else if (last.type === 'voice') msgEl.textContent = '[语音]';
+        else msgEl.textContent = last.content || '';
     }
-
-    if (timeEl) {
-        timeEl.textContent = last ? formatChatTime(last.ts) : '';
-    }
-
+    if (timeEl) timeEl.textContent = last ? formatChatTime(last.ts) : '';
     if (unreadEl) {
-        const count = getUnreadCount();
-        unreadEl.textContent = count > 0 ? String(count) : '';
+        const c = getUnreadCount();
+        unreadEl.textContent = c > 0 ? String(c) : '';
     }
 }
 
 
 /* ==========================================================================
-   06. 渲染：聊天头部
+   渲染：聊天头
    ========================================================================== */
 
 function renderChatHeader() {
@@ -219,7 +160,6 @@ function renderChatHeader() {
     const nameEl = byId('chat-header-name');
     if (nameEl) nameEl.textContent = profile.ta.name || 'TA';
 
-    // 头像图片
     const circle = byId('chat-header-avatar');
     if (circle && profile.ta.avatar) {
         let img = circle.querySelector('img.mj-avatar-img');
@@ -239,19 +179,7 @@ function renderChatHeader() {
 
 
 /* ==========================================================================
-   07. 渲染：消息列表
-   --------------------------------------------------------------------------
-   消息 DOM 结构（对齐 CSS 里的 .chat-row / .chat-bubble）：
-     <div class="chat-row ta|me">
-       <div class="chat-row-avatar">[svg 或 img]</div>
-       <div class="chat-bubble ta|me">
-         [文本 / <img> / 语音块]
-       </div>
-     </div>
-   时间戳：
-     <div class="chat-timestamp">昨天 20:31</div>
-   已读：
-     <div class="chat-read">已读</div>
+   渲染：消息
    ========================================================================== */
 
 function renderChatMessages() {
@@ -262,37 +190,24 @@ function renderChatMessages() {
     const empty = byId('chat-empty-state');
 
     if (!list.length) {
-        // 显示空状态
         if (empty) empty.hidden = false;
-        // 移除已渲染的消息节点，但保留空状态节点
-        Array.from(container.children).forEach((child) => {
-            if (child !== empty) child.remove();
-        });
+        Array.from(container.children).forEach((c) => { if (c !== empty) c.remove(); });
         container.setAttribute(RENDERED_FLAG, '1');
         return;
     }
 
-    // 有消息：隐藏空状态
     if (empty) empty.hidden = true;
-
-    // 清空并重建（简单可靠；消息量不大时性能足够）
-    // 保留空状态节点备用
-    Array.from(container.children).forEach((child) => {
-        if (child !== empty) child.remove();
-    });
+    Array.from(container.children).forEach((c) => { if (c !== empty) c.remove(); });
 
     const fragment = document.createDocumentFragment();
     list.forEach((msg, idx) => {
-        // 时间分隔：首条 or 与上一条间隔 > 5 分钟
         const prev = list[idx - 1];
         if (!prev || msg.ts - prev.ts > 5 * 60 * 1000) {
             fragment.appendChild(createTimestampEl(msg.ts));
         }
-
         fragment.appendChild(createMessageEl(msg));
     });
 
-    // 已读标记（放在最后一条我方消息之后）
     const appearance = get(KEYS.CHAT_APPEARANCE);
     if (appearance.timestamp?.showRead) {
         const lastMe = [...list].reverse().find((m) => m.role === 'me');
@@ -308,25 +223,18 @@ function renderChatMessages() {
     container.setAttribute(RENDERED_FLAG, '1');
 }
 
-/**
- * 创建单条消息 DOM
- * @param {Object} msg
- * @returns {HTMLElement}
- */
 function createMessageEl(msg) {
     const profile = get(KEYS.PROFILE);
     const row = document.createElement('div');
     row.className = `chat-row ${msg.role === 'me' ? 'me' : 'ta'}`;
     row.dataset.msgId = msg.id;
 
-    // 头像
     const avatar = document.createElement('div');
     avatar.className = 'chat-row-avatar';
     const avatarSrc = msg.role === 'me' ? profile.me.avatar : profile.ta.avatar;
     avatar.appendChild(createAvatarContent(avatarSrc));
     row.appendChild(avatar);
 
-    // 气泡
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${msg.role === 'me' ? 'me' : 'ta'}`;
 
@@ -346,22 +254,14 @@ function createMessageEl(msg) {
         bubble.appendChild(icon);
         bubble.appendChild(dur);
     } else {
-        // 纯文本：使用 textContent 保证安全
         bubble.textContent = msg.content || '';
     }
 
-    // 长按 → 上下文菜单
     attachMessageContextMenu(bubble, msg);
-
     row.appendChild(bubble);
     return row;
 }
 
-/**
- * 创建头像内容（有图片用图片，否则回退到 SVG）
- * @param {string} src
- * @returns {HTMLElement}
- */
 function createAvatarContent(src) {
     if (src) {
         const img = document.createElement('img');
@@ -372,25 +272,16 @@ function createAvatarContent(src) {
         img.src = src;
         return img;
     }
-    // 默认 svg
     const svgNS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(svgNS, 'svg');
     svg.setAttribute('viewBox', '0 0 24 24');
     svg.setAttribute('aria-hidden', 'true');
     const path = document.createElementNS(svgNS, 'path');
-    path.setAttribute(
-        'd',
-        'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'
-    );
+    path.setAttribute('d', 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z');
     svg.appendChild(path);
     return svg;
 }
 
-/**
- * 创建时间戳节点
- * @param {number} ts
- * @returns {HTMLElement}
- */
 function createTimestampEl(ts) {
     const el = document.createElement('div');
     el.className = 'chat-timestamp';
@@ -398,27 +289,17 @@ function createTimestampEl(ts) {
     return el;
 }
 
-/**
- * 滚动到底部
- * @param {boolean} [smooth=false]
- */
 function scrollChatToBottom(smooth = false) {
     const container = byId('chat-message-list');
     if (!container) return;
-    // 延迟一帧，等 DOM 渲染完成
     requestAnimationFrame(() => scrollToBottom(container, smooth));
 }
 
 
 /* ==========================================================================
-   08. 追加消息（供内部和外部调用）
+   追加消息
    ========================================================================== */
 
-/**
- * 追加一条消息并渲染
- * @param {Object} msg  { role, type, content, ... }
- * @returns {Object} 完整的消息对象
- */
 export function appendMessage(msg) {
     const list = getMessages();
     const full = {
@@ -433,13 +314,10 @@ export function appendMessage(msg) {
     list.push(full);
     setMessages(list);
 
-    // 如果当前在聊天页，直接把 DOM 追加进去
     const container = byId('chat-message-list');
     if (container && container.getAttribute(RENDERED_FLAG)) {
         const empty = byId('chat-empty-state');
         if (empty) empty.hidden = true;
-
-        // 首条或间隔久，插时间戳
         const prev = list[list.length - 2];
         if (!prev || full.ts - prev.ts > 5 * 60 * 1000) {
             container.appendChild(createTimestampEl(full.ts));
@@ -448,42 +326,27 @@ export function appendMessage(msg) {
         scrollChatToBottom(true);
     }
 
-    // 更新列表预览
     renderChatListPreview();
-
-    // 广播
     bus.emit('chat:new-message', full);
-
     return full;
 }
 
-/**
- * 由外部（如喝水页）向我方追加一条消息
- * @param {string} text
- */
 export function sendSystemMessage(text) {
     appendMessage({ role: 'me', type: 'text', content: text });
 }
 
 
 /* ==========================================================================
-   09. 输入区
-   --------------------------------------------------------------------------
-   HTML：
-     #chat-input
-     #btn-chat-emoji   data-action="toggle-emoji-picker"
-     #btn-chat-plus    data-action="toggle-more-panel"
+   输入区
    ========================================================================== */
 
 function bindInput() {
     const input = byId('chat-input');
     if (!input) return;
 
-    // 恢复草稿
     const chat = ensureChatData();
     if (chat.draft) input.value = chat.draft;
 
-    // 输入时保存草稿（节流）
     const saveDraft = debounce((val) => {
         const c = get(KEYS.CHAT);
         c[CHAT_ID].draft = val;
@@ -492,7 +355,6 @@ function bindInput() {
 
     input.addEventListener('input', () => saveDraft(input.value));
 
-    // 回车发送
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -500,7 +362,6 @@ function bindInput() {
         }
     });
 
-    // 失焦也保存一次
     input.addEventListener('blur', () => {
         const c = get(KEYS.CHAT);
         c[CHAT_ID].draft = input.value;
@@ -508,69 +369,58 @@ function bindInput() {
     });
 }
 
-/**
- * 发送输入框当前内容
- */
 export function sendCurrentInput() {
     const input = byId('chat-input');
     if (!input) return;
-
     const text = (input.value || '').trim();
     if (!text) return;
 
     appendMessage({ role: 'me', type: 'text', content: text });
 
-    // 清空输入与草稿
     input.value = '';
     const chat = get(KEYS.CHAT);
     chat[CHAT_ID].draft = '';
     set(KEYS.CHAT, chat);
 
-    // 触发自动回复
     scheduleAutoReply();
 }
 
 
 /* ==========================================================================
-   10. 自动回复
-   --------------------------------------------------------------------------
-   从 settings.reply 读取：
-     minSpeed / maxSpeed     回复延迟区间（秒）
-     minCount / maxCount     每次回复条数区间
-     spellCard               是否拼字卡
-     readNoReply             已读不回
-     taProactive             TA 主动发信息（这个由 scheduleProactive 触发）
+   自动回复
    ========================================================================== */
+
+const TA_REPLIES = [
+    '嗯嗯，我在呢', '今天想我了没？', '嘻嘻，刚看到消息', '好呀，听你的',
+    '那你呢？在干嘛呀', '我也想你了~', '嘿嘿，抱抱', '嗯…让我想想',
+    '今天累不累？', '记得好好吃饭哦', '我一直都在呀', '好想快点见到你',
+    '你开心我就开心', '要好好照顾自己呀', '晚点再聊好不好', '嗯…你说得对',
+    '哇，真的吗？', '我也是这么想的', '嘿嘿，被你发现了', '那必须的呀'
+];
 
 function scheduleAutoReply() {
     const settings = get(KEYS.SETTINGS);
     const replyCfg = settings.reply || {};
 
-    // 已读不回：直接标记为已读，不回复
     if (replyCfg.readNoReply) {
         markAllRead();
         return;
     }
 
-    // 随机延迟
     const minSpeed = Math.max(0, Number(replyCfg.minSpeed) || 1);
     const maxSpeed = Math.max(minSpeed, Number(replyCfg.maxSpeed) || 10);
     const delaySec = randomInt(minSpeed, maxSpeed);
 
-    // 随机条数
     const minCount = Math.max(1, Number(replyCfg.minCount) || 1);
     const maxCount = Math.max(minCount, Number(replyCfg.maxCount) || 3);
     const totalCount = randomInt(minCount, maxCount);
 
-    // 每条消息之间也有小间隔
     for (let i = 0; i < totalCount; i++) {
         const delay = (delaySec * 1000) + i * randomInt(500, 1500);
         const timer = setTimeout(() => {
             const text = generateReplyText();
             appendMessage({ role: 'ta', type: 'text', content: text });
-            // 逐条标记已读
             if (i === totalCount - 1) {
-                // 最后一条也算已读（用户在看到）
                 const chat = get(KEYS.CHAT);
                 chat[CHAT_ID].lastReadTs = Date.now();
                 set(KEYS.CHAT, chat);
@@ -580,16 +430,10 @@ function scheduleAutoReply() {
     }
 }
 
-/**
- * 生成一条回复文本
- * 优先用字卡库（如果开了拼字卡），否则用内置语料
- * @returns {string}
- */
 function generateReplyText() {
     const settings = get(KEYS.SETTINGS);
     const replyCfg = settings.reply || {};
 
-    // 开启拼字卡 → 从字卡库取
     if (replyCfg.spellCard) {
         const wordCards = get(KEYS.WORD_CARD);
         const pool = [
@@ -603,38 +447,9 @@ function generateReplyText() {
         }
     }
 
-    // 内置语料
     return randomPick(TA_REPLIES) || '嗯嗯';
 }
 
-/** TA 的默认语料池 */
-const TA_REPLIES = [
-    '嗯嗯，我在呢',
-    '今天想我了没？',
-    '嘻嘻，刚看到消息',
-    '好呀，听你的',
-    '那你呢？在干嘛呀',
-    '我也想你了~',
-    '嘿嘿，抱抱',
-    '嗯…让我想想',
-    '今天累不累？',
-    '记得好好吃饭哦',
-    '我一直都在呀',
-    '好想快点见到你',
-    '你开心我就开心',
-    '要好好照顾自己呀',
-    '晚点再聊好不好',
-    '嗯…你说得对',
-    '哇，真的吗？',
-    '我也是这么想的',
-    '嘿嘿，被你发现了',
-    '那必须的呀'
-];
-
-/**
- * TA 主动发消息（由定时器或设置开启后触发）
- * 节流：PROACTIVE_COOLDOWN 内只触发一次
- */
 export function triggerProactiveMessage() {
     const settings = get(KEYS.SETTINGS);
     if (!settings.reply?.taProactive) return;
@@ -643,45 +458,27 @@ export function triggerProactiveMessage() {
     if (now - _lastProactiveAt < PROACTIVE_COOLDOWN) return;
     _lastProactiveAt = now;
 
-    appendMessage({
-        role: 'ta',
-        type: 'text',
-        content: generateReplyText()
-    });
-
-    // 如果不在聊天页，显示未读（由 renderChatListPreview 自动处理）
-    if (!_inChatScreen) {
-        bus.emit('chat:unread');
-    }
+    appendMessage({ role: 'ta', type: 'text', content: generateReplyText() });
+    if (!_inChatScreen) bus.emit('chat:unread');
 }
 
-/**
- * 启动一个定时器，检查是否需要 TA 主动发消息
- * 建议由 app.js 在启动时调用一次
- */
 export function startProactiveLoop() {
     setInterval(() => {
         const settings = get(KEYS.SETTINGS);
         if (!settings.reply?.taProactive) return;
-        // 随机概率触发（每分钟约 8%）
-        if (Math.random() < 0.08) {
-            triggerProactiveMessage();
-        }
+        if (Math.random() < 0.08) triggerProactiveMessage();
     }, 60 * 1000);
 }
 
 
 /* ==========================================================================
-   11. 消息上下文菜单（长按复制 / 收藏 / 删除）
+   长按消息菜单
    ========================================================================== */
 
 function attachMessageContextMenu(el, msg) {
     let pressTimer = null;
-
     const start = () => {
-        pressTimer = setTimeout(() => {
-            showMessageMenu(msg);
-        }, 550);
+        pressTimer = setTimeout(() => showMessageMenu(msg), 550);
     };
     const cancel = () => {
         if (pressTimer) clearTimeout(pressTimer);
@@ -692,41 +489,33 @@ function attachMessageContextMenu(el, msg) {
     el.addEventListener('touchend', cancel);
     el.addEventListener('touchmove', cancel);
     el.addEventListener('touchcancel', cancel);
-
-    // 桌面端右键
     el.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         showMessageMenu(msg);
     });
 }
 
-/**
- * 弹出消息操作菜单
- * 用 confirm 组合模拟简单菜单，避免新增 HTML
- * @param {Object} msg
- */
-function showMessageMenu(msg) {
+async function showMessageMenu(msg) {
     if (msg.type !== 'text') {
-        if (window.confirm('删除这条消息？')) {
-            deleteMessage(msg.id);
-        }
+        const ok = await mjConfirm('删除这条消息？', { title: '删除消息' });
+        if (ok) deleteMessage(msg.id);
         return;
     }
 
     const text = msg.content || '';
-    const choice = window.prompt(
-        '输入序号操作：\n1. 复制\n2. 收藏\n3. 删除',
-        '1'
-    );
+    const choice = await mjPrompt('操作这条消息', {
+        placeholder: '1. 复制  2. 收藏  3. 删除',
+        defaultValue: '1',
+        confirmText: '执行'
+    });
     if (choice === null) return;
 
-    const n = parseInt(choice, 10);
-    if (n === 1) {
-        copyText(text);
-    } else if (n === 2) {
-        addToFavorites(text);
-    } else if (n === 3) {
-        deleteMessage(msg.id);
+    const n = parseInt(String(choice).trim(), 10);
+    if (n === 1) copyText(text);
+    else if (n === 2) addToFavorites(text);
+    else if (n === 3) {
+        const ok = await mjConfirm('删除这条消息？', { title: '删除消息' });
+        if (ok) deleteMessage(msg.id);
     }
 }
 
@@ -766,27 +555,7 @@ function deleteMessage(id) {
 
 
 /* ==========================================================================
-   12. 聊天列表点击
-   ========================================================================== */
-
-function bindChatListClick() {
-    const item = byId('chat-list-item-ta');
-    if (!item) return;
-    // data-nav="chat" 已由 event.js 处理跳转
-    // 这里只需在进入时清未读
-    item.addEventListener('click', () => {
-        markAllRead();
-    });
-}
-
-
-/* ==========================================================================
-   13. 外观设置应用（CSS 变量）
-   --------------------------------------------------------------------------
-   读取 KEYS.CHAT_APPEARANCE 并写入 CSS 变量：
-     --bubble-size / --bubble-radius / --bubble-me-bg / --bubble-me-text
-     --avatar-size / --avatar-radius
-     --chat-bg
+   外观设置
    ========================================================================== */
 
 export function applyAppearance() {
@@ -794,7 +563,6 @@ export function applyAppearance() {
     const root = document.documentElement;
     const chatScreen = byId('screen-chat');
 
-    // 气泡
     const bubble = ap.bubble || {};
     root.style.setProperty('--bubble-size', `${bubble.size || 14}px`);
     root.style.setProperty('--bubble-radius', `${bubble.radius ?? 15}px`);
@@ -804,21 +572,13 @@ export function applyAppearance() {
         isDarkColor(bubble.colorMe || DEFAULT_BUBBLE_COLOR) ? '#fff' : '#1a1a1a'
     );
 
-    // 文字（作用于聊天正文）
     const textCfg = ap.text || {};
-    if (chatScreen) {
-        chatScreen.style.fontSize = `${textCfg.size || 14}px`;
-    }
+    if (chatScreen) chatScreen.style.fontSize = `${textCfg.size || 14}px`;
 
-    // 头像
     const av = ap.avatar || {};
     root.style.setProperty('--avatar-size', `${av.size || 38}px`);
-    root.style.setProperty(
-        '--avatar-radius',
-        av.shape === 'square' ? '8px' : '999px'
-    );
+    root.style.setProperty('--avatar-radius', av.shape === 'square' ? '8px' : '999px');
 
-    // 背景
     const bg = ap.background || {};
     if (chatScreen) {
         if (bg.type === 'image' && bg.image) {
@@ -832,64 +592,35 @@ export function applyAppearance() {
         }
     }
 
-    // 时间戳/已读
-    const ts = ap.timestamp || {};
-    const container = byId('chat-message-list');
-    if (container) {
-        container.classList.toggle('hide-timestamp', ts.show === false);
-    }
-
-    // 自定义 CSS（直接注入 <style>）
     applyCustomCss(ap);
 }
 
-/**
- * 判断颜色是否偏暗
- * @param {string} color
- * @returns {boolean}
- */
 function isDarkColor(color) {
     if (!color) return true;
     const hex = color.replace('#', '');
     if (hex.length !== 3 && hex.length !== 6) return true;
-    const full = hex.length === 3
-        ? hex.split('').map((c) => c + c).join('')
-        : hex;
+    const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
     const r = parseInt(full.slice(0, 2), 16);
     const g = parseInt(full.slice(2, 4), 16);
     const b = parseInt(full.slice(4, 6), 16);
-    // 相对亮度公式
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance < 0.6;
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.6;
 }
 
-/** 缓存 <style> 元素 */
 let _customStyleEl = null;
 
-/**
- * 注入自定义 CSS
- * @param {Object} ap
- */
 function applyCustomCss(ap) {
     if (!_customStyleEl) {
         _customStyleEl = document.createElement('style');
         _customStyleEl.id = 'mj-custom-css';
         document.head.appendChild(_customStyleEl);
     }
-    const css = [
-        ap.bubble?.customCss || '',
-        ap.text?.customCss || ''
-    ].join('\n');
+    const css = [ap.bubble?.customCss || '', ap.text?.customCss || ''].join('\n');
     _customStyleEl.textContent = css;
 }
 
 
 /* ==========================================================================
-   14. 设置弹窗：绑定
-   --------------------------------------------------------------------------
-   覆盖 HTML 里的：
-     #modal-bg / #modal-bubble / #modal-text / #modal-avatar
-     #modal-timestamp / #modal-data / #modal-group-chat
+   设置弹窗
    ========================================================================== */
 
 function bindSettingsModals() {
@@ -903,10 +634,9 @@ function bindSettingsModals() {
 }
 
 
-/* ---------- 14.1 聊天背景 ---------- */
+/* ---------- 背景 ---------- */
 
 function bindBgModal() {
-    // 点击色块
     const grid = byId('bg-color-grid');
     if (grid) {
         grid.addEventListener('click', (e) => {
@@ -921,7 +651,6 @@ function bindBgModal() {
         });
     }
 
-    // 上传图片
     const btn = byId('btn-upload-bg-image');
     if (btn) {
         btn.addEventListener('click', () => {
@@ -947,7 +676,7 @@ function bindBgModal() {
 }
 
 
-/* ---------- 14.2 气泡设置 ---------- */
+/* ---------- 气泡 ---------- */
 
 function bindBubbleModal() {
     const sizeEl = byId('bubble-size');
@@ -975,7 +704,6 @@ function bindBubbleModal() {
         });
     }
 
-    // 颜色选择
     const grid = byId('bubble-color-grid');
     if (grid) {
         grid.addEventListener('click', (e) => {
@@ -990,7 +718,6 @@ function bindBubbleModal() {
         });
     }
 
-    // 自定义 CSS
     const cssArea = byId('bubble-custom-css');
     if (cssArea) {
         cssArea.addEventListener('change', () => {
@@ -1001,7 +728,6 @@ function bindBubbleModal() {
         });
     }
 
-    // 保存按钮
     const saveBtn = byId('btn-save-bubble');
     if (saveBtn) {
         saveBtn.addEventListener('click', () => {
@@ -1012,7 +738,7 @@ function bindBubbleModal() {
 }
 
 
-/* ---------- 14.3 文字设置 ---------- */
+/* ---------- 文字 ---------- */
 
 function bindTextModal() {
     const sizeEl = byId('text-size');
@@ -1048,7 +774,7 @@ function bindTextModal() {
 }
 
 
-/* ---------- 14.4 头像设置 ---------- */
+/* ---------- 头像 ---------- */
 
 function bindAvatarModal() {
     const shapeGroup = byId('avatar-shape-options');
@@ -1068,10 +794,7 @@ function bindAvatarModal() {
             const sizeInput = byId('avatar-size');
             const size = clamp(parseInt(sizeInput?.value, 10) || 38, 1, 200);
 
-            update(KEYS.CHAT_APPEARANCE, {
-                avatar: { shape, size }
-            });
-
+            update(KEYS.CHAT_APPEARANCE, { avatar: { shape, size } });
             syncInfoRowText(
                 'info-row-value-avatar',
                 `${shape === 'circle' ? '圆形' : '方形'} · ${size}px`
@@ -1083,11 +806,9 @@ function bindAvatarModal() {
 }
 
 
-/* ---------- 14.5 时间戳 / 已读 ---------- */
+/* ---------- 时间戳 ---------- */
 
 function bindTimestampModal() {
-    // HTML 里这两个是 .check-indicator，用 data-action="toggle-check"
-    // 会被 event.js 的通用动作处理，这里只订阅变化并持久化
     bus.on('check:change', ({ id, value }) => {
         if (id === 'timestamp') {
             update(KEYS.CHAT_APPEARANCE, {
@@ -1104,7 +825,6 @@ function bindTimestampModal() {
         }
     });
 
-    // 打开时同步界面状态
     const modal = byId('modal-timestamp');
     if (modal) {
         const observer = new MutationObserver(() => {
@@ -1127,10 +847,9 @@ function updateTimestampInfoRow() {
 }
 
 
-/* ---------- 14.6 聊天数据（导出 / 导入 / 删除） ---------- */
+/* ---------- 数据 ---------- */
 
 function bindDataModal() {
-    // 导出
     const exportBtn = byId('btn-export-chat');
     if (exportBtn) {
         exportBtn.addEventListener('click', () => {
@@ -1142,7 +861,6 @@ function bindDataModal() {
         });
     }
 
-    // 导入
     const importBtn = byId('btn-import-chat');
     if (importBtn) {
         importBtn.addEventListener('click', () => {
@@ -1170,11 +888,13 @@ function bindDataModal() {
         });
     }
 
-    // 删除
     const deleteBtn = byId('btn-delete-chat');
     if (deleteBtn) {
-        deleteBtn.addEventListener('click', () => {
-            if (!window.confirm('确定要删除所有聊天记录吗？此操作不可恢复。')) return;
+        deleteBtn.addEventListener('click', async () => {
+            const ok = await mjConfirm('确定要删除所有聊天记录吗？此操作不可恢复。', {
+                title: '删除聊天记录'
+            });
+            if (!ok) return;
             set(KEYS.CHAT, {
                 [CHAT_ID]: { messages: [], lastReadTs: 0, draft: '' }
             });
@@ -1187,7 +907,7 @@ function bindDataModal() {
 }
 
 
-/* ---------- 14.7 发起群聊 ---------- */
+/* ---------- 群聊 ---------- */
 
 function bindGroupChatModal() {
     const createBtn = byId('btn-create-group-chat');
@@ -1197,7 +917,6 @@ function bindGroupChatModal() {
             const name = (nameInput?.value || '').trim() || '群聊';
             toast(`已创建群聊：${name}`);
             closeModal('modal-group-chat');
-            // TODO: 真正创建群聊会话（当前先给提示）
         });
     }
 
@@ -1211,19 +930,12 @@ function bindGroupChatModal() {
 
 
 /* ==========================================================================
-   15. 聊天信息页右侧行文本同步
-   --------------------------------------------------------------------------
-   HTML：
-     #info-row-value-bubble     "14px ›"
-     #info-row-value-text       "14px ›"
-     #info-row-value-avatar     "圆形 · 38px ›"
-     #info-row-value-timestamp  "时间戳 · 未读 ›"
+   聊天信息页
    ========================================================================== */
 
 function syncInfoRowText(elId, valueText) {
     const el = byId(elId);
     if (!el) return;
-    // 保留末尾的 "›" 箭头
     el.innerHTML = '';
     el.appendChild(document.createTextNode(valueText + ' '));
     const arrow = document.createElement('span');
@@ -1233,15 +945,11 @@ function syncInfoRowText(elId, valueText) {
     el.appendChild(arrow);
 }
 
-/**
- * 刷新聊天信息页所有展示值
- */
 export function refreshChatInfoPage() {
     const ap = get(KEYS.CHAT_APPEARANCE);
     const bubble = ap.bubble || {};
     const text = ap.text || {};
     const av = ap.avatar || {};
-    const ts = ap.timestamp || {};
 
     syncInfoRowText('info-row-value-bubble', `${bubble.size || 14}px`);
     syncInfoRowText('info-row-value-text', `${text.size || 14}px`);
@@ -1251,14 +959,12 @@ export function refreshChatInfoPage() {
     );
     updateTimestampInfoRow();
 
-    // 同步开关状态
     const info = get(KEYS.CHAT_INFO);
     const ta = info[CHAT_ID] || {};
     setSwitch(byId('switch-mute'), !!ta.mute);
     setSwitch(byId('switch-top'), !!ta.top);
 }
 
-// 监听来自 event.js 的开关变化，持久化
 bus.on('switch:change', ({ id, value }) => {
     if (id === 'mute' || id === 'top') {
         const info = get(KEYS.CHAT_INFO);
@@ -1270,12 +976,9 @@ bus.on('switch:change', ({ id, value }) => {
 
 
 /* ==========================================================================
-   16. 打开设置弹窗时同步界面
+   打开设置弹窗时同步
    ========================================================================== */
 
-/**
- * 打开气泡设置时，用当前值初始化表单
- */
 export function syncBubbleModal() {
     const ap = get(KEYS.CHAT_APPEARANCE);
     const bubble = ap.bubble || {};
@@ -1284,7 +987,6 @@ export function syncBubbleModal() {
     if (sizeEl) sizeEl.value = bubble.size || 14;
     if (radiusEl) radiusEl.value = bubble.radius ?? 15;
 
-    // 颜色高亮
     const grid = byId('bubble-color-grid');
     if (grid) {
         grid.querySelectorAll('.color-item').forEach((item) => {
@@ -1333,7 +1035,7 @@ export function syncBgModal() {
 
 
 /* ==========================================================================
-   17. 工具函数
+   工具
    ========================================================================== */
 
 function clamp(n, min, max) {
@@ -1342,15 +1044,16 @@ function clamp(n, min, max) {
 
 
 /* ==========================================================================
-   18. 供 app.js 注册的 action / nav 集合
+   actions / navs
    ========================================================================== */
 
 export const chatActions = {
 
-    /* ---------- 通用 ---------- */
-    'toggle-emoji-picker': () => {
-        // 简单实现：弹一个 emoji 输入
-        const emoji = window.prompt('输入一个 emoji：', '😊');
+    'toggle-emoji-picker': async () => {
+        const emoji = await mjPrompt('输入一个 emoji', {
+            placeholder: '例如 😊',
+            confirmText: '插入'
+        });
         if (!emoji) return;
         const input = byId('chat-input');
         if (input) {
@@ -1359,25 +1062,23 @@ export const chatActions = {
         }
     },
 
-    'toggle-more-panel': () => {
-        const input = byId('chat-input');
-        const choice = window.prompt(
-            '输入序号：\n1. 发送图片\n2. 从字卡库选择\n3. 发起群聊',
-            '1'
-        );
-        if (!choice) return;
-        const n = parseInt(choice, 10);
+    'toggle-more-panel': async () => {
+        const choice = await mjPrompt('更多功能', {
+            placeholder: '1. 发送图片  2. 从字卡库选择  3. 发起群聊',
+            defaultValue: '1',
+            confirmText: '执行'
+        });
+        if (choice === null) return;
+        const n = parseInt(String(choice).trim(), 10);
         if (n === 1) pickAndSendImage();
         else if (n === 2) pickFromWordCard();
         else if (n === 3) openModal('modal-group-chat');
     },
 
-    /* ---------- 通话 ---------- */
     'start-call': () => {
         bus.emit('call:start', { name: get(KEYS.PROFILE).ta.name || 'TA' });
     },
 
-    /* ---------- 聊天信息页入口 ---------- */
     'open-bg-settings':        () => { syncBgModal(); openModal('modal-bg'); },
     'open-bubble-settings':    () => { syncBubbleModal(); openModal('modal-bubble'); },
     'open-text-settings':      () => { syncTextModal(); openModal('modal-text'); },
@@ -1387,20 +1088,20 @@ export const chatActions = {
     'open-group-chat':         () => openModal('modal-group-chat'),
     'close-chat-info':         () => showScreen('screen-chat'),
 
-    /* ---------- 保存 ---------- */
     'save-bubble-settings': () => { toast('已保存'); bus.emit('settings:changed'); },
     'save-text-settings':   () => { toast('已保存'); bus.emit('settings:changed'); },
     'save-avatar-settings': () => { toast('已保存'); bus.emit('settings:changed'); },
 
-    /* ---------- 数据 ---------- */
     'export-chat': () => byId('btn-export-chat')?.click(),
     'import-chat': () => byId('btn-import-chat')?.click(),
     'delete-chat': () => byId('btn-delete-chat')?.click(),
     'create-group-chat': () => byId('btn-create-group-chat')?.click(),
 
-    /* ---------- 搜索（暂用 prompt） ---------- */
-    'search-chat': () => {
-        const kw = window.prompt('搜索聊天记录：', '');
+    'search-chat': async () => {
+        const kw = await mjPrompt('搜索聊天记录', {
+            placeholder: '输入关键词',
+            confirmText: '搜索'
+        });
         if (!kw) return;
         const list = getMessages().filter(
             (m) => m.type === 'text' && (m.content || '').includes(kw)
@@ -1408,10 +1109,12 @@ export const chatActions = {
         toast(`找到 ${list.length} 条包含"${kw}"的消息`);
     },
 
-    /* ---------- 查看 TA 资料 ---------- */
     'view-ta-profile': () => {
         const profile = get(KEYS.PROFILE);
-        window.alert(`名字：${profile.ta.name || 'TA'}\n头像：${profile.ta.avatar ? '已设置' : '默认'}`);
+        mjAlert(
+            `名字：${profile.ta.name || 'TA'}\n头像：${profile.ta.avatar ? '已设置' : '默认'}`,
+            { title: 'TA 的资料' }
+        );
     }
 };
 
@@ -1426,7 +1129,7 @@ export const chatNavs = {
 
 
 /* ==========================================================================
-   19. 内部辅助：发图片 / 从字卡选
+   辅助：发图片 / 字卡
    ========================================================================== */
 
 function pickAndSendImage() {
@@ -1446,7 +1149,7 @@ function pickAndSendImage() {
     input.click();
 }
 
-function pickFromWordCard() {
+async function pickFromWordCard() {
     const wc = get(KEYS.WORD_CARD);
     const pool = [...(wc.main || []), ...(wc.kaomoji || [])];
     if (!pool.length) {
@@ -1454,9 +1157,13 @@ function pickFromWordCard() {
         return;
     }
     const preview = pool.slice(0, 10).map((c, i) => `${i + 1}. ${c.text}`).join('\n');
-    const ans = window.prompt(`选择一张字卡（1-${Math.min(10, pool.length)}）：\n${preview}`, '1');
+    const ans = await mjPrompt('选择字卡', {
+        placeholder: preview,
+        defaultValue: '1',
+        confirmText: '发送'
+    });
     if (ans === null) return;
-    const idx = parseInt(ans, 10) - 1;
+    const idx = parseInt(String(ans).trim(), 10) - 1;
     if (idx < 0 || idx >= pool.length) return;
     appendMessage({ role: 'me', type: 'text', content: pool[idx].text });
     scheduleAutoReply();
@@ -1464,7 +1171,7 @@ function pickFromWordCard() {
 
 
 /* ==========================================================================
-   20. 对外导出
+   对外导出
    ========================================================================== */
 
 export default {
