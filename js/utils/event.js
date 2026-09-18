@@ -12,7 +12,6 @@
 import {
     closeModalByChild,
     toggleSwitch,
-    toggleCheckById,
     setCheck,
     getCheck
 } from './dom.js';
