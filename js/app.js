@@ -149,6 +149,7 @@ function broadcastScreenChange() {
 const RAW_NAVS = {
     /* ---------- 通用 ---------- */
     'home': () => showScreen('screen-home'),
+    'settings': () => showScreen('screen-settings'),
 
     /* ---------- 聊天 ---------- */
     ...chatNavs,
