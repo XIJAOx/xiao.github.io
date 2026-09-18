@@ -611,6 +611,7 @@ function bindPlaylistDelegate() {
    ========================================================================== */
 
 function bindAddMusic() {
+function bindAddMusic() {
     const addBtn = byId('btn-music-add');
     const inputWrap = byId('music-add-input');
     const confirmBtn = byId('btn-confirm-add-music');
@@ -645,7 +646,7 @@ function bindAddMusic() {
         });
     }
 }
-
+   
 /**
  * 添加一首歌
  * @param {string} url
