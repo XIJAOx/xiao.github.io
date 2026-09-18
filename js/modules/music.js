@@ -611,38 +611,33 @@ function bindPlaylistDelegate() {
    ========================================================================== */
 
 function bindAddMusic() {
-function bindAddMusic() {
-    const addBtn = byId('btn-music-add');
+function toggleAddMusicInput() {
     const inputWrap = byId('music-add-input');
-    const confirmBtn = byId('btn-confirm-add-music');
     const urlInput = byId('music-url-input');
+    if (!inputWrap) return;
+    inputWrap.hidden = !inputWrap.hidden;
+    if (!inputWrap.hidden) urlInput?.focus();
+}
 
-    if (addBtn && inputWrap) {
-        addBtn.addEventListener('click', () => {
-            inputWrap.hidden = !inputWrap.hidden;
-            if (!inputWrap.hidden) urlInput?.focus();
-        });
+function confirmAddMusic() {
+    const inputWrap = byId('music-add-input');
+    const urlInput = byId('music-url-input');
+    const url = (urlInput?.value || '').trim();
+    if (!url) {
+        toast('请输入音乐链接');
+        return;
     }
+    addSong(url);
+    if (urlInput) urlInput.value = '';
+    if (inputWrap) inputWrap.hidden = true;
+}
 
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', () => {
-            const url = (urlInput?.value || '').trim();
-            if (!url) {
-                toast('请输入音乐链接');
-                return;
-            }
-            addSong(url);
-
-            // 清空 + 隐藏
-            if (urlInput) urlInput.value = '';
-            if (inputWrap) inputWrap.hidden = true;
-        });
-    }
-
-    // 回车也添加
+function bindAddMusic() {
+    // 按钮通过 data-action 分发，这里只保留输入框的回车
+    const urlInput = byId('music-url-input');
     if (urlInput) {
         urlInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') confirmBtn?.click();
+            if (e.key === 'Enter') confirmAddMusic();
         });
     }
 }
