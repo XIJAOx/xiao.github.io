@@ -1,15 +1,6 @@
 /* ==========================================================================
    梦角 · Dream Corner
    音乐模块  js/modules/music.js
-   --------------------------------------------------------------------------
-   覆盖 HTML 中的：
-     音乐页 #screen-music
-       - #music-tabs
-       - #music-add-input + #music-url-input + #btn-confirm-add-music
-       - #music-library / #music-empty
-       - #music-playlist + #music-playlist-items + #btn-music-playlist-add
-       - #btn-music-batch-manage / #music-batch-actions
-     首页播放器 #home-music-player
    ========================================================================== */
 
 import {
@@ -28,10 +19,8 @@ import {
 
 import { bus, on } from '../utils/event.js';
 
+import { mjPrompt, mjConfirm, mjAlert } from '../utils/dialogs.js';
 
-/* ==========================================================================
-   01. 常量
-   ========================================================================== */
 
 const TABS = {
     LIBRARY: 'my-library',
@@ -42,14 +31,8 @@ const TABS = {
 const DEFAULT_PLAYLIST_ID = 'default';
 const PROGRESS_INTERVAL = 500;
 
-
-/* ==========================================================================
-   02. 内部状态
-   ========================================================================== */
-
 let _initialized = false;
 let _unsubs = [];
-
 let _currentTab = TABS.LIBRARY;
 let _currentPlaylistFilter = null;
 let _batchMode = false;
@@ -61,7 +44,7 @@ let _suppressBroadcast = false;
 
 
 /* ==========================================================================
-   03. 入口
+   入口
    ========================================================================== */
 
 export function initMusic() {
@@ -71,9 +54,7 @@ export function initMusic() {
     ensureMusicData();
     createAudio();
 
-    // 只需绑定不走 data-action 的交互
     bindUrlInputEnter();
-    bindLibraryDelegate();
     bindPlaylistDelegate();
     bindBusHandlers();
 
@@ -96,7 +77,7 @@ export function destroyMusic() {
 
 
 /* ==========================================================================
-   04. 数据结构
+   数据结构
    ========================================================================== */
 
 function ensureMusicData() {
@@ -132,7 +113,7 @@ function saveCurrent(patch) {
 
 
 /* ==========================================================================
-   05. Audio 控制
+   Audio
    ========================================================================== */
 
 function createAudio() {
@@ -144,7 +125,6 @@ function createAudio() {
         broadcastState();
         updateProgressBar();
     });
-
     _audio.addEventListener('loadedmetadata', () => {
         const current = get(KEYS.MUSIC).current;
         if (current && current.songId && _audio.duration && isFinite(_audio.duration)) {
@@ -152,23 +132,16 @@ function createAudio() {
         }
         broadcastState();
     });
-
-    _audio.addEventListener('ended', () => {
-        playNext();
-    });
-
+    _audio.addEventListener('ended', () => playNext());
     _audio.addEventListener('error', () => {
-        console.warn('[music] 音频加载失败');
         toast('这首歌暂时播放不了');
         broadcastState();
     });
-
     _audio.addEventListener('play', () => {
         saveCurrent({ playing: true });
         startProgressTimer();
         broadcastState();
     });
-
     _audio.addEventListener('pause', () => {
         saveCurrent({ playing: false });
         stopProgressTimer();
@@ -178,10 +151,7 @@ function createAudio() {
 
 export function playSong(songId, autoplay = true) {
     const song = getSongById(songId);
-    if (!song) {
-        toast('这首歌不存在');
-        return;
-    }
+    if (!song) { toast('这首歌不存在'); return; }
     if (!_audio) createAudio();
 
     const current = get(KEYS.MUSIC).current;
@@ -195,8 +165,7 @@ export function playSong(songId, autoplay = true) {
     saveCurrent({ songId, currentTime: 0 });
 
     if (autoplay) {
-        _audio.play().catch((err) => {
-            console.warn('[music] 播放失败：', err);
+        _audio.play().catch(() => {
             toast('浏览器阻止了自动播放，请手动点击');
         });
     }
@@ -206,15 +175,8 @@ export function playSong(songId, autoplay = true) {
     updateProgressBar();
 }
 
-export function pause() {
-    if (_audio && !_audio.paused) _audio.pause();
-}
-
-export function resume() {
-    if (_audio && _audio.paused && _audio.src) {
-        _audio.play().catch(() => {});
-    }
-}
+export function pause() { if (_audio && !_audio.paused) _audio.pause(); }
+export function resume() { if (_audio && _audio.paused && _audio.src) _audio.play().catch(() => {}); }
 
 export function togglePlay() {
     const current = get(KEYS.MUSIC).current;
@@ -273,17 +235,16 @@ function getPlaylistSongsForCurrentTab() {
 
 
 /* ==========================================================================
-   06. 播放状态广播
+   广播
    ========================================================================== */
 
 function broadcastState() {
     if (_suppressBroadcast) return;
-
     const data = ensureMusicData();
     const current = data.current;
     const song = current.songId ? getSongById(current.songId) : null;
 
-    const state = {
+    bus.emit('music:state', {
         title: song ? song.title : '未在播放',
         sub: song ? (song.artist || '未知歌手') : '选择一首歌开始',
         current: _audio ? (_audio.currentTime || 0) : 0,
@@ -292,9 +253,7 @@ function broadcastState() {
         progress: _audio && _audio.duration
             ? (_audio.currentTime / _audio.duration) * 100
             : 0
-    };
-
-    bus.emit('music:state', state);
+    });
 }
 
 function updateProgressBar() {
@@ -326,24 +285,20 @@ function stopProgressTimer() {
 function restoreLastState() {
     const data = ensureMusicData();
     const songId = data.current.songId;
-    if (!songId) {
-        broadcastState();
-        return;
-    }
+    if (!songId) { broadcastState(); return; }
     const song = getSongById(songId);
     if (!song) return;
 
     if (!_audio) createAudio();
     _audio.src = song.url || '';
     _audio.currentTime = data.current.currentTime || 0;
-
     broadcastState();
     updateProgressBar();
 }
 
 
 /* ==========================================================================
-   07. Tab 切换
+   Tab 切换
    ========================================================================== */
 
 export function switchTab(tab) {
@@ -367,7 +322,7 @@ export function switchTab(tab) {
 
 
 /* ==========================================================================
-   08. 渲染：音乐库
+   渲染库
    ========================================================================== */
 
 function renderLibrary() {
@@ -432,11 +387,8 @@ function createSongEl(song, isPlaying) {
     item.appendChild(info);
 
     item.addEventListener('click', () => {
-        if (_batchMode) {
-            toggleSelectSong(song.id, item);
-        } else {
-            playSong(song.id);
-        }
+        if (_batchMode) toggleSelectSong(song.id, item);
+        else playSong(song.id);
     });
 
     attachLongPress(item, song);
@@ -446,7 +398,7 @@ function createSongEl(song, isPlaying) {
 
 
 /* ==========================================================================
-   09. 渲染：歌单
+   渲染歌单
    ========================================================================== */
 
 function renderPlaylists() {
@@ -486,13 +438,12 @@ function bindPlaylistDelegate() {
         const btn = e.target.closest('[data-playlist-id]');
         if (!btn) return;
         const id = btn.dataset.playlistId;
-
         _currentPlaylistFilter = _currentPlaylistFilter === id ? null : id;
         renderPlaylists();
         renderLibrary();
     });
 
-    wrap.addEventListener('contextmenu', (e) => {
+    wrap.addEventListener('contextmenu', async (e) => {
         const btn = e.target.closest('[data-playlist-id]');
         if (!btn) return;
         e.preventDefault();
@@ -501,7 +452,8 @@ function bindPlaylistDelegate() {
             toast('默认歌单不可删除');
             return;
         }
-        if (!window.confirm('删除这个歌单？')) return;
+        const ok = await mjConfirm('删除这个歌单？', { title: '删除歌单' });
+        if (!ok) return;
         const data = get(KEYS.MUSIC);
         data.playlists = data.playlists.filter((p) => p.id !== id);
         set(KEYS.MUSIC, data);
@@ -514,7 +466,7 @@ function bindPlaylistDelegate() {
 
 
 /* ==========================================================================
-   10. 添加音乐
+   添加音乐
    ========================================================================== */
 
 function bindUrlInputEnter() {
@@ -528,38 +480,24 @@ function bindUrlInputEnter() {
     });
 }
 
-/**
- * 切换添加输入框显示
- */
 export function toggleAddMusicInput() {
     const inputWrap = byId('music-add-input');
     const urlInput = byId('music-url-input');
     if (!inputWrap) return;
     inputWrap.hidden = !inputWrap.hidden;
-    if (!inputWrap.hidden) {
-        setTimeout(() => urlInput?.focus(), 100);
-    }
+    if (!inputWrap.hidden) setTimeout(() => urlInput?.focus(), 100);
 }
 
-/**
- * 确认添加
- */
 export function confirmAddMusic() {
     const inputWrap = byId('music-add-input');
     const urlInput = byId('music-url-input');
     const url = (urlInput?.value || '').trim();
-    if (!url) {
-        toast('请输入音乐链接');
-        return;
-    }
+    if (!url) { toast('请输入音乐链接'); return; }
     addSong(url);
     if (urlInput) urlInput.value = '';
     if (inputWrap) inputWrap.hidden = true;
 }
 
-/**
- * 添加一首歌
- */
 export function addSong(url) {
     const data = get(KEYS.MUSIC);
 
@@ -569,9 +507,7 @@ export function addSong(url) {
         const filename = u.pathname.split('/').filter(Boolean).pop() || '';
         const base = filename.replace(/\.[^.]+$/, '');
         if (base) title = decodeURIComponent(base);
-    } catch (e) {
-        // 忽略
-    }
+    } catch (e) { /* 忽略 */ }
 
     const song = {
         id: uid('song'),
@@ -608,10 +544,8 @@ function prefetchDuration(songId, url) {
             }
             probe.src = '';
         });
-        probe.addEventListener('error', () => {
-            probe.src = '';
-        });
-    } catch (e) { /* ignore */ }
+        probe.addEventListener('error', () => { probe.src = ''; });
+    } catch (e) { /* 忽略 */ }
 }
 
 function updateSongDuration(songId, duration) {
@@ -625,13 +559,16 @@ function updateSongDuration(songId, duration) {
 
 
 /* ==========================================================================
-   11. 新建歌单
+   新建歌单
    ========================================================================== */
 
-export function addPlaylist() {
-    const name = window.prompt('新歌单名称：', '');
+export async function addPlaylist() {
+    const name = await mjPrompt('新建歌单', {
+        placeholder: '歌单名称',
+        confirmText: '创建'
+    });
     if (name === null) return;
-    const trimmed = name.trim();
+    const trimmed = String(name).trim();
     if (!trimmed) return;
 
     const data = get(KEYS.MUSIC);
@@ -647,7 +584,7 @@ export function addPlaylist() {
 
 
 /* ==========================================================================
-   12. 批量管理
+   批量管理
    ========================================================================== */
 
 export function toggleBatchManage() {
@@ -691,13 +628,13 @@ function toggleSelectSong(id, el) {
     }
 }
 
-export function deleteSelectedSongs() {
-    if (_selectedIds.size === 0) {
-        toast('还没有选择');
-        return;
-    }
+export async function deleteSelectedSongs() {
+    if (_selectedIds.size === 0) { toast('还没有选择'); return; }
 
-    if (!window.confirm(`确定删除选中的 ${_selectedIds.size} 首歌吗？`)) return;
+    const ok = await mjConfirm(`确定删除选中的 ${_selectedIds.size} 首歌吗？`, {
+        title: '删除音乐'
+    });
+    if (!ok) return;
 
     const data = get(KEYS.MUSIC);
     data.library = data.library.filter((s) => !_selectedIds.has(s.id));
@@ -730,16 +667,13 @@ export function deleteSelectedSongs() {
 
 
 /* ==========================================================================
-   13. 长按：收藏 / 加入歌单 / 删除
+   长按菜单
    ========================================================================== */
 
 function attachLongPress(el, song) {
     let timer = null;
-
     const start = () => {
-        timer = setTimeout(() => {
-            showSongMenu(song);
-        }, 650);
+        timer = setTimeout(() => showSongMenu(song), 650);
     };
     const cancel = () => {
         if (timer) clearTimeout(timer);
@@ -758,18 +692,19 @@ function attachLongPress(el, song) {
     });
 }
 
-function showSongMenu(song) {
+async function showSongMenu(song) {
     const data = ensureMusicData();
     const isFav = data.favorites.includes(song.id);
     const favLabel = isFav ? '取消收藏' : '收藏';
 
-    const choice = window.prompt(
-        `《${song.title}》\n\n输入序号：\n1. ${favLabel}\n2. 加入歌单\n3. 删除`,
-        '1'
-    );
+    const choice = await mjPrompt(`《${song.title}》`, {
+        placeholder: `1. ${favLabel}  2. 加入歌单  3. 删除`,
+        defaultValue: '1',
+        confirmText: '执行'
+    });
     if (choice === null) return;
 
-    const n = parseInt(choice, 10);
+    const n = parseInt(String(choice).trim(), 10);
     if (n === 1) toggleFavorite(song.id);
     else if (n === 2) addSongToPlaylist(song.id);
     else if (n === 3) deleteSong(song.id);
@@ -789,14 +724,16 @@ function toggleFavorite(songId) {
     renderLibrary();
 }
 
-function addSongToPlaylist(songId) {
+async function addSongToPlaylist(songId) {
     const data = ensureMusicData();
-    const names = data.playlists
-        .map((p, i) => `${i + 1}. ${p.name}`)
-        .join('\n');
-    const ans = window.prompt(`加入哪个歌单？\n\n${names}`, '1');
+    const names = data.playlists.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
+    const ans = await mjPrompt('加入哪个歌单？', {
+        placeholder: names,
+        defaultValue: '1',
+        confirmText: '加入'
+    });
     if (ans === null) return;
-    const idx = parseInt(ans, 10) - 1;
+    const idx = parseInt(String(ans).trim(), 10) - 1;
     if (idx < 0 || idx >= data.playlists.length) return;
 
     const pl = data.playlists[idx];
@@ -810,8 +747,10 @@ function addSongToPlaylist(songId) {
     }
 }
 
-function deleteSong(songId) {
-    if (!window.confirm('删除这首歌？')) return;
+async function deleteSong(songId) {
+    const ok = await mjConfirm('删除这首歌？', { title: '删除音乐' });
+    if (!ok) return;
+
     const data = get(KEYS.MUSIC);
     data.library = data.library.filter((s) => s.id !== songId);
     data.favorites = data.favorites.filter((id) => id !== songId);
@@ -831,16 +770,7 @@ function deleteSong(songId) {
 
 
 /* ==========================================================================
-   14. 库列表事件占位
-   ========================================================================== */
-
-function bindLibraryDelegate() {
-    // 目前播放和选择的点击都在 createSongEl 里
-}
-
-
-/* ==========================================================================
-   15. 响应 bus 上的播放控制
+   bus 响应
    ========================================================================== */
 
 function bindBusHandlers() {
@@ -854,7 +784,7 @@ function bindBusHandlers() {
 
 
 /* ==========================================================================
-   16. 供 app.js 注册的 action / nav 集合
+   actions / navs
    ========================================================================== */
 
 export const musicActions = {
@@ -864,11 +794,9 @@ export const musicActions = {
     'delete-selected-music': () => deleteSelectedSongs(),
     'cancel-music-batch':    () => exitBatchMode(),
     'add-playlist':          () => addPlaylist(),
-
-    /* 首页播放器 */
-    'music-play': () => togglePlay(),
-    'music-next': () => playNext(),
-    'music-prev': () => playPrev()
+    'music-play':            () => togglePlay(),
+    'music-next':            () => playNext(),
+    'music-prev':            () => playPrev()
 };
 
 export const musicNavs = {
@@ -879,11 +807,6 @@ export const musicNavs = {
         showScreen('screen-music');
     }
 };
-
-
-/* ==========================================================================
-   17. 对外导出
-   ========================================================================== */
 
 export default {
     initMusic,
