@@ -46,7 +46,9 @@ const NOTIFICATION_PERMISSION_MAP = {
 let _initialized = false;
 let _unsubs = [];
 let _currentWordCardTab = 'main';
-
+let _currentWordCardFolder = null;
+let _wordCardSelectMode = false;
+const _selectedWordCardIds = new Set();
 
 /* ==========================================================================
    入口
