@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>XIAO</title>
     <link rel="stylesheet" href="css/styles.css">
+    <script>
+window.addEventListener('error', function(e) {
+    var msg = '【错误】\n'
+        + '消息：' + (e.message || '') + '\n'
+        + '文件：' + (e.filename || '') + '\n'
+        + '行号：' + (e.lineno || '');
+    alert(msg);
+});
+window.addEventListener('unhandledrejection', function(e) {
+    alert('【Promise 错误】\n' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+});
+</script>
 </head>
 <body>
     <div class="app" id="app" data-app-version="1.0.0">
