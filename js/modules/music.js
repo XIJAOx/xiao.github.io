@@ -721,25 +721,25 @@ function updateSongDuration(songId, duration) {
    ========================================================================== */
 
 function bindPlaylistAdd() {
-    const btn = byId('btn-music-playlist-add');
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-        const name = window.prompt('新歌单名称：', '');
-        if (name === null) return;
-        const trimmed = name.trim();
-        if (!trimmed) return;
-
-        const data = get(KEYS.MUSIC);
-        data.playlists.push({
-            id: uid('pl'),
-            name: trimmed,
-            songIds: []
-        });
-        set(KEYS.MUSIC, data);
-        renderPlaylists();
-        toast('已创建歌单：' + trimmed);
-    });
+    // 走 data-action
 }
+
+function addPlaylist() {
+    const name = window.prompt('新歌单名称：', '');
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    const data = get(KEYS.MUSIC);
+    data.playlists.push({
+        id: uid('pl'),
+        name: trimmed,
+        songIds: []
+    });
+    set(KEYS.MUSIC, data);
+    renderPlaylists();
+    toast('已创建歌单：' + trimmed);
+       }
 
 
 /* ==========================================================================
