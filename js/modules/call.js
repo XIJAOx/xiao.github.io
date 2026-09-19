@@ -283,6 +283,14 @@ export function hangUp() {
     endCall('ended');
 }
 
+function formatDurationCN(sec) {
+    const s = Math.max(0, Math.floor(sec || 0));
+    if (s < 60) return `${s} 秒`;
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return r === 0 ? `${m} 分` : `${m} 分 ${r} 秒`;
+}
+
 function endCall(reason) {
     const duration = getCurrentDuration();
 
