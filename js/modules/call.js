@@ -217,10 +217,23 @@ function startTalking(taName) {
 }
 
 export function minimizeCall() {
+    // 呼叫中 → 直接取消挂断
+    if (_state === 'outgoing') {
+        endCall('cancelled');
+        return;
+    }
+
+    // 来电中 → 拒绝
+    if (_state === 'incoming') {
+        rejectIncoming();
+        return;
+    }
+
+    // 只在通话中才允许最小化
     if (_state !== 'talking') return;
 
     _state = 'minimized';
-
+   
     const overlay = byId('call-modal-overlay');
     if (overlay) overlay.hidden = true;
 
