@@ -204,9 +204,6 @@ function renderChatMessages() {
     const showTimestamp = appearance.timestamp?.show !== false;
     const showRead = !!appearance.timestamp?.showRead;
 
-    const lastMe = [...list].reverse().find((m) => m.role === 'me');
-    const lastMeTs = lastMe ? lastMe.ts : 0;
-
     const fragment = document.createDocumentFragment();
 
     list.forEach((msg, idx) => {
@@ -216,20 +213,12 @@ function renderChatMessages() {
             fragment.appendChild(createTimestampEl(msg.ts));
         }
 
-        fragment.appendChild(createMessageEl(msg));
-
-        if (showRead && msg.role === 'me' && msg.ts === lastMeTs) {
-            const readEl = document.createElement('div');
-            readEl.className = 'chat-read';
-            readEl.textContent = msg.read ? '已读' : '未读';
-            fragment.appendChild(readEl);
-        }
+        fragment.appendChild(createMessageEl(msg, { showRead }));
     });
 
     container.appendChild(fragment);
     container.setAttribute(RENDERED_FLAG, '1');
 }
-
 function createMessageEl(msg) {
     const profile = get(KEYS.PROFILE);
     const row = document.createElement('div');
