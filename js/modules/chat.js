@@ -183,7 +183,6 @@ function renderChatHeader() {
    ========================================================================== */
 
 function renderChatMessages() {
-function renderChatMessages() {
     const container = byId('chat-message-list');
     if (!container) return;
 
@@ -209,7 +208,6 @@ function renderChatMessages() {
     const showTimestamp = appearance.timestamp?.show !== false;
     const showRead = !!appearance.timestamp?.showRead;
 
-    // 找到最后一条我方消息，用于判断"已读"显示位置
     const lastMe = [...list].reverse().find((m) => m.role === 'me');
     const lastMeTs = lastMe ? lastMe.ts : 0;
 
@@ -218,14 +216,12 @@ function renderChatMessages() {
     list.forEach((msg, idx) => {
         const prev = list[idx - 1];
 
-        // 时间戳：开关打开 + （首条 或 间隔 > 5 分钟）才显示
         if (showTimestamp && (!prev || msg.ts - prev.ts > 5 * 60 * 1000)) {
             fragment.appendChild(createTimestampEl(msg.ts));
         }
 
         fragment.appendChild(createMessageEl(msg));
 
-        // 已读标记：加在最后一条我方消息下方，且之后 TA 有回复
         if (
             showRead &&
             msg.role === 'me' &&
