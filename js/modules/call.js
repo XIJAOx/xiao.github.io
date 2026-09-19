@@ -414,6 +414,7 @@ function rejectIncoming() {
 
     _state = 'idle';
     toast('已拒绝');
+    bus.emit('chat:call-record', '已拒绝通话');
 
     const data = get(KEYS.CALL);
     if (!Array.isArray(data.records)) data.records = [];
