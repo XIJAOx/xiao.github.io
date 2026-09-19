@@ -183,6 +183,7 @@ function renderChatHeader() {
    ========================================================================== */
 
 function renderChatMessages() {
+function renderChatMessages() {
     const container = byId('chat-message-list');
     if (!container) return;
 
@@ -191,10 +192,56 @@ function renderChatMessages() {
 
     if (!list.length) {
         if (empty) empty.hidden = false;
-        Array.from(container.children).forEach((c) => { if (c !== empty) c.remove(); });
+        Array.from(container.children).forEach((child) => {
+            if (child !== empty) child.remove();
+        });
         container.setAttribute(RENDERED_FLAG, '1');
         return;
     }
+
+    if (empty) empty.hidden = true;
+
+    Array.from(container.children).forEach((child) => {
+        if (child !== empty) child.remove();
+    });
+
+    const appearance = get(KEYS.CHAT_APPEARANCE);
+    const showTimestamp = appearance.timestamp?.show !== false;
+    const showRead = !!appearance.timestamp?.showRead;
+
+    // 找到最后一条我方消息，用于判断"已读"显示位置
+    const lastMe = [...list].reverse().find((m) => m.role === 'me');
+    const lastMeTs = lastMe ? lastMe.ts : 0;
+
+    const fragment = document.createDocumentFragment();
+
+    list.forEach((msg, idx) => {
+        const prev = list[idx - 1];
+
+        // 时间戳：开关打开 + （首条 或 间隔 > 5 分钟）才显示
+        if (showTimestamp && (!prev || msg.ts - prev.ts > 5 * 60 * 1000)) {
+            fragment.appendChild(createTimestampEl(msg.ts));
+        }
+
+        fragment.appendChild(createMessageEl(msg));
+
+        // 已读标记：加在最后一条我方消息下方，且之后 TA 有回复
+        if (
+            showRead &&
+            msg.role === 'me' &&
+            msg.ts === lastMeTs &&
+            list.some((m) => m.role === 'ta' && m.ts > msg.ts)
+        ) {
+            const readEl = document.createElement('div');
+            readEl.className = 'chat-read';
+            readEl.textContent = '已读';
+            fragment.appendChild(readEl);
+        }
+    });
+
+    container.appendChild(fragment);
+    container.setAttribute(RENDERED_FLAG, '1');
+}
 
     if (empty) empty.hidden = true;
     Array.from(container.children).forEach((c) => { if (c !== empty) c.remove(); });
@@ -202,6 +249,7 @@ function renderChatMessages() {
     const fragment = document.createDocumentFragment();
     list.forEach((msg, idx) => {
         const prev = list[idx - 1];
+       
         if (!prev || msg.ts - prev.ts > 5 * 60 * 1000) {
             fragment.appendChild(createTimestampEl(msg.ts));
         }
@@ -820,6 +868,7 @@ function bindTimestampModal() {
             update(KEYS.CHAT_APPEARANCE, {
                 timestamp: { ...get(KEYS.CHAT_APPEARANCE).timestamp, showRead: value }
             });
+            applyAppearance();
             renderChatMessages();
             updateTimestampInfoRow();
         }
