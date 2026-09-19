@@ -842,35 +842,54 @@ function bindAvatarModal() {
 /* ---------- 时间戳 ---------- */
 
 function bindTimestampModal() {
+    // 监听勾选变化（显示时间戳 / 显示已读）
     bus.on('check:change', ({ id, value }) => {
         if (id === 'timestamp') {
             update(KEYS.CHAT_APPEARANCE, {
                 timestamp: { ...get(KEYS.CHAT_APPEARANCE).timestamp, show: value }
             });
-            applyAppearance();
             renderChatMessages();
             updateTimestampInfoRow();
         } else if (id === 'read-receipt') {
             update(KEYS.CHAT_APPEARANCE, {
                 timestamp: { ...get(KEYS.CHAT_APPEARANCE).timestamp, showRead: value }
             });
-            applyAppearance();
             renderChatMessages();
             updateTimestampInfoRow();
         }
     });
 
+    // 时间格式：时:分 / 时:分:秒
     const modal = byId('modal-timestamp');
     if (modal) {
+        modal.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-time-format]');
+            if (!btn) return;
+            const format = btn.dataset.timeFormat;
+            update(KEYS.CHAT_APPEARANCE, {
+                timestamp: { ...get(KEYS.CHAT_APPEARANCE).timestamp, format }
+            });
+            syncTimeFormatButtons(format);
+            renderChatMessages();
+        });
+
+        // 打开弹窗时同步界面状态
         const observer = new MutationObserver(() => {
             if (modal.classList.contains('active')) {
                 const ap = get(KEYS.CHAT_APPEARANCE);
                 setCheck(byId('check-timestamp'), ap.timestamp?.show !== false);
                 setCheck(byId('check-read-receipt'), !!ap.timestamp?.showRead);
+                syncTimeFormatButtons(ap.timestamp?.format || 'hm');
             }
         });
         observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
     }
+}
+
+function syncTimeFormatButtons(format) {
+    document.querySelectorAll('[data-time-format]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.timeFormat === format);
+    });
 }
 
 function updateTimestampInfoRow() {
