@@ -219,7 +219,9 @@ function renderChatMessages() {
     container.appendChild(fragment);
     container.setAttribute(RENDERED_FLAG, '1');
 }
-function createMessageEl(msg) {
+
+function createMessageEl(msg, options = {}) {
+    const { showRead = false } = options;
     const profile = get(KEYS.PROFILE);
     const row = document.createElement('div');
     row.className = `chat-row ${msg.role === 'me' ? 'me' : 'ta'}`;
@@ -251,6 +253,14 @@ function createMessageEl(msg) {
         bubble.appendChild(dur);
     } else {
         bubble.textContent = msg.content || '';
+    }
+
+    // 已读/未读 → 显示在气泡右下角
+    if (showRead && msg.role === 'me') {
+        const readEl = document.createElement('span');
+        readEl.className = 'chat-read-inline';
+        readEl.textContent = msg.read ? '已读' : '未读';
+        bubble.appendChild(readEl);
     }
 
     attachMessageContextMenu(bubble, msg);
