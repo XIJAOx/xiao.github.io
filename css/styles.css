@@ -5376,3 +5376,26 @@ select:focus-visible,
     color: #fff;
     background: var(--c-danger, #ff5252);
 }
+
+/* ==========================================================================
+   聊天气泡：系统消息（通话记录等）
+   ========================================================================== */
+
+.chat-row.system {
+    justify-content: center;
+    margin: 6px 0;
+}
+
+.chat-row.system .chat-bubble.system {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--c-text-3);
+    font-size: 11px;
+    line-height: 1;
+    padding: 6px 14px;
+    border-radius: 999px;
+    max-width: 80%;
+    text-align: center;
+    box-shadow: none;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+}
