@@ -327,6 +327,13 @@ export const DEFAULTS = {
         records: []     // { id, type:'in'|'out', name, duration, ts }
     }),
 
+    [KEYS.CHARACTERS]: () => ({
+        list: [
+            { id: 'ta', name: 'TA', avatar: '', createdAt: Date.now(), isDefault: true }
+        ],
+        currentId: 'ta'
+    }),
+
     [KEYS.PROFILE]: () => ({
         ta: { name: 'TA', avatar: '' },
         me: { name: '我', avatar: '' }
