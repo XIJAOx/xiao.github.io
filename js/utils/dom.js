@@ -779,3 +779,83 @@ export function formatBytes(bytes) {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
+
+/* ==========================================================================
+   通用应用内弹窗（替代 window.confirm / alert / prompt）
+   ========================================================================== */
+
+export function mjConfirm(message, options = {}) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay active';
+        overlay.innerHTML = `
+            <div class="modal" style="max-width: 320px;">
+                <h2 class="modal-title" style="margin-bottom: 14px;">${escapeHtml(options.title || '确认')}</h2>
+                <p style="font-size: 14px; line-height: 1.6; color: var(--c-text-1); margin-bottom: 20px; white-space: pre-wrap;">${escapeHtml(message)}</p>
+                <div class="modal-actions" style="margin-top: 0;">
+                    <button class="modal-btn secondary" data-role="cancel">${escapeHtml(options.cancelText || '取消')}</button>
+                    <button class="modal-btn primary" data-role="confirm">${escapeHtml(options.confirmText || '确定')}</button>
+                </div>
+            </div>
+        `;
+        const close = (result) => { overlay.remove(); resolve(result); };
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay || e.target.closest('[data-role="cancel"]')) close(false);
+            if (e.target.closest('[data-role="confirm"]')) close(true);
+        });
+        document.body.appendChild(overlay);
+    });
+}
+
+export function mjAlert(message, options = {}) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay active';
+        overlay.innerHTML = `
+            <div class="modal" style="max-width: 320px;">
+                <h2 class="modal-title" style="margin-bottom: 14px;">${escapeHtml(options.title || '提示')}</h2>
+                <p style="font-size: 14px; line-height: 1.6; color: var(--c-text-1); margin-bottom: 20px; white-space: pre-wrap;">${escapeHtml(message)}</p>
+                <div class="modal-actions" style="margin-top: 0;">
+                    <button class="modal-btn primary" data-role="ok" style="flex:1;">${escapeHtml(options.okText || '知道了')}</button>
+                </div>
+            </div>
+        `;
+        const close = () => { overlay.remove(); resolve(); };
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay || e.target.closest('[data-role="ok"]')) close();
+        });
+        document.body.appendChild(overlay);
+    });
+}
+
+export function mjPrompt(message, options = {}) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay active';
+        overlay.innerHTML = `
+            <div class="modal" style="max-width: 320px;">
+                <h2 class="modal-title" style="margin-bottom: 14px;">${escapeHtml(options.title || '请输入')}</h2>
+                <p style="font-size: 14px; line-height: 1.6; color: var(--c-text-1); margin-bottom: 12px; white-space: pre-wrap;">${escapeHtml(message)}</p>
+                <input type="text" class="form-input" data-role="input"
+                    placeholder="${escapeHtml(options.placeholder || '')}"
+                    value="${escapeHtml(options.defaultValue || '')}"
+                    style="width:100%;height:42px;padding:0 14px;border:1px solid var(--c-line-2);border-radius:12px;font-size:14px;background:var(--c-surface-2);margin-bottom: 20px;">
+                <div class="modal-actions" style="margin-top: 0;">
+                    <button class="modal-btn secondary" data-role="cancel">${escapeHtml(options.cancelText || '取消')}</button>
+                    <button class="modal-btn primary" data-role="confirm">${escapeHtml(options.confirmText || '确定')}</button>
+                </div>
+            </div>
+        `;
+        const input = overlay.querySelector('[data-role="input"]');
+        const close = (result) => { overlay.remove(); resolve(result); };
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay || e.target.closest('[data-role="cancel"]')) close(null);
+            if (e.target.closest('[data-role="confirm"]')) close(input.value);
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') close(input.value);
+        });
+        document.body.appendChild(overlay);
+        setTimeout(() => input.focus(), 100);
+    });
+}
