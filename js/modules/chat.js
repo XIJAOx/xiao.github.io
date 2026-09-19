@@ -330,10 +330,12 @@ export function appendMessage(msg) {
         const prev = list[list.length - 2];
         const appearance = get(KEYS.CHAT_APPEARANCE);
         const showTimestamp = appearance.timestamp?.show !== false;
+        const showRead = !!appearance.timestamp?.showRead;
+
         if (showTimestamp && (!prev || full.ts - prev.ts > 5 * 60 * 1000)) {
             container.appendChild(createTimestampEl(full.ts));
         }
-        container.appendChild(createMessageEl(full));
+        container.appendChild(createMessageEl(full, { showRead }));
         scrollChatToBottom(true);
     }
 
