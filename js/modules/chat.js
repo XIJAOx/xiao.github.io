@@ -203,6 +203,7 @@ function renderChatMessages() {
     const showTimestamp = appearance.timestamp?.show !== false;
     const showRead = !!appearance.timestamp?.showRead;
 
+    // 最后一条我方消息
     const lastMe = [...list].reverse().find((m) => m.role === 'me');
     const lastMeTs = lastMe ? lastMe.ts : 0;
 
@@ -217,15 +218,11 @@ function renderChatMessages() {
 
         fragment.appendChild(createMessageEl(msg));
 
-        if (
-            showRead &&
-            msg.role === 'me' &&
-            msg.ts === lastMeTs &&
-            list.some((m) => m.role === 'ta' && m.ts > msg.ts)
-        ) {
+        // 已读/未读：只加在最后一条我方消息下方
+        if (showRead && msg.role === 'me' && msg.ts === lastMeTs) {
             const readEl = document.createElement('div');
             readEl.className = 'chat-read';
-            readEl.textContent = '已读';
+            readEl.textContent = msg.read ? '已读' : '未读';
             fragment.appendChild(readEl);
         }
     });
@@ -313,15 +310,18 @@ function scrollChatToBottom(smooth = false) {
 
 export function appendMessage(msg) {
     const list = getMessages();
+
+    const role = msg.role || 'me';
     const full = {
         id: msg.id || uid('msg'),
-        role: msg.role || 'me',
+        role,
         type: msg.type || 'text',
         content: msg.content || '',
         ts: msg.ts || Date.now(),
-        read: msg.read || false,
+        read: msg.read !== undefined ? msg.read : (role === 'ta'),
         ...msg
     };
+
     list.push(full);
     setMessages(list);
 
@@ -434,9 +434,14 @@ function scheduleAutoReply() {
             const text = generateReplyText();
             appendMessage({ role: 'ta', type: 'text', content: text });
             if (i === totalCount - 1) {
+                // TA 回复完后，把我方所有消息标记为已读
                 const chat = get(KEYS.CHAT);
                 chat[CHAT_ID].lastReadTs = Date.now();
+                chat[CHAT_ID].messages.forEach((m) => {
+                    if (m.role === 'me') m.read = true;
+                });
                 set(KEYS.CHAT, chat);
+                renderChatMessages();
             }
         }, delay);
         _replyTimers.push(timer);
