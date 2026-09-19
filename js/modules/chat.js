@@ -55,6 +55,7 @@ export function initChat() {
         bus.on('profile:update', () => {
             renderChatHeader();
             renderChatListPreview();
+            refreshChatInfoPage();
         }),
         bus.on('settings:changed', applyAppearance),
         bus.on('screen:change', ({ id }) => {
