@@ -294,6 +294,15 @@ function createAvatarContent(src) {
     return svg;
 }
 
+function formatTimeInline(ts, format) {
+    const d = ts instanceof Date ? ts : new Date(ts);
+    const pad = (n) => String(n).padStart(2, '0');
+    const hh = pad(d.getHours());
+    const mm = pad(d.getMinutes());
+    const ss = pad(d.getSeconds());
+    return format === 'hms' ? `${hh}:${mm}:${ss}` : `${hh}:${mm}`;
+}
+
 function createTimestampEl(ts) {
     const el = document.createElement('div');
     el.className = 'chat-timestamp';
