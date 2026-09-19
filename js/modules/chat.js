@@ -1211,6 +1211,105 @@ function openAddCharacterDialog() {
     openCharacterEditor(null);
 }
 
+/**
+ * 打开"管理梦角"弹窗：列出所有梦角，可编辑/删除/添加
+ */
+function openCharacterManager() {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay active';
+    overlay.innerHTML = `
+        <div class="modal" style="max-width: 360px;">
+            <div class="modal-header">
+                <h2 class="modal-title">管理梦角</h2>
+                <button class="modal-close" data-role="close" aria-label="关闭">✕</button>
+            </div>
+
+            <div class="char-manager-list" id="char-manager-list"></div>
+
+            <button class="upload-btn" id="btn-char-manager-add" type="button">+ 添加梦角</button>
+
+            <div class="modal-actions">
+                <button class="modal-btn primary" data-role="close">关闭</button>
+            </div>
+        </div>
+    `;
+
+    const listEl = overlay.querySelector('#char-manager-list');
+    const close = () => overlay.remove();
+
+    const renderList = () => {
+        const chars = getCharacters().list;
+        listEl.innerHTML = '';
+
+        chars.forEach((c) => {
+            const row = document.createElement('div');
+            row.className = 'char-manager-row';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'char-manager-avatar';
+            applyAvatarTo(avatar, c.avatar);
+            row.appendChild(avatar);
+
+            const nameWrap = document.createElement('div');
+            nameWrap.className = 'char-manager-name';
+            const nameText = document.createElement('div');
+            nameText.textContent = c.name;
+            nameWrap.appendChild(nameText);
+            if (c.isDefault) {
+                const tag = document.createElement('span');
+                tag.className = 'char-manager-tag';
+                tag.textContent = '默认';
+                nameWrap.appendChild(tag);
+            }
+            row.appendChild(nameWrap);
+
+            const actions = document.createElement('div');
+            actions.className = 'char-manager-actions';
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'char-manager-btn';
+            editBtn.textContent = '编辑';
+            editBtn.addEventListener('click', () => {
+                close();
+                openCharacterEditor(c);
+            });
+            actions.appendChild(editBtn);
+
+            if (!c.isDefault) {
+                const delBtn = document.createElement('button');
+                delBtn.className = 'char-manager-btn danger';
+                delBtn.textContent = '删除';
+                delBtn.addEventListener('click', async () => {
+                    const ok = await mjConfirm(`确定删除「${c.name}」吗？聊天记录将一并删除。`, {
+                        title: '删除梦角'
+                    });
+                    if (!ok) return;
+                    removeCharacter(c.id);
+                    renderList();
+                    renderChatList();
+                    toast('已删除');
+                });
+                actions.appendChild(delBtn);
+            }
+
+            row.appendChild(actions);
+            listEl.appendChild(row);
+        });
+    };
+    renderList();
+
+    overlay.querySelector('#btn-char-manager-add').addEventListener('click', () => {
+        close();
+        openAddCharacterDialog();
+    });
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || e.target.closest('[data-role="close"]')) close();
+    });
+
+    document.body.appendChild(overlay);
+}
+
 function openCharacterEditor(char) {
     const isNew = !char;
     let tempAvatar = char ? (char.avatar || '') : '';
