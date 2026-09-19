@@ -233,6 +233,10 @@ function createMessageEl(msg, options = {}) {
     avatar.appendChild(createAvatarContent(avatarSrc));
     row.appendChild(avatar);
 
+    // 用 wrap 包住气泡和已读标记
+    const wrap = document.createElement('div');
+    wrap.className = `chat-bubble-wrap ${msg.role === 'me' ? 'me' : 'ta'}`;
+
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${msg.role === 'me' ? 'me' : 'ta'}`;
 
@@ -255,16 +259,18 @@ function createMessageEl(msg, options = {}) {
         bubble.textContent = msg.content || '';
     }
 
-    // 已读/未读 → 显示在气泡右下角
+    wrap.appendChild(bubble);
+
+    // 已读/未读 → 气泡外部右下角
     if (showRead && msg.role === 'me') {
         const readEl = document.createElement('span');
         readEl.className = 'chat-read-inline';
         readEl.textContent = msg.read ? '已读' : '未读';
-        bubble.appendChild(readEl);
+        wrap.appendChild(readEl);
     }
 
     attachMessageContextMenu(bubble, msg);
-    row.appendChild(bubble);
+    row.appendChild(wrap);
     return row;
 }
 
