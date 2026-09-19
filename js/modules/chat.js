@@ -14,6 +14,7 @@ import {
     scrollToBottom,
     uid, randomInt, randomPick, debounce,
     downloadFile, readFileAsText,
+    escapeHtml,
     mjConfirm, mjPrompt, mjAlert
 } from '../utils/dom.js';
 
