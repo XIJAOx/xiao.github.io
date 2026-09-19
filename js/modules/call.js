@@ -8,7 +8,7 @@ import {
     toast,
     setText, setVisible,
     formatDuration, formatChatTime,
-    uid, randomInt,
+    uid, randomInt,randomPick,
     escapeHtml
 } from '../utils/dom.js';
 
