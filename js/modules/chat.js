@@ -8,22 +8,17 @@ import {
     showScreen,
     openModal, closeModal,
     toast,
-    setVisible, setText,
-    setSwitch, getSwitch, setCheck, getCheck, setActiveInGroup,
+    setSwitch,
+    setCheck, setActiveInGroup,
     formatChatTime, formatDuration, formatDate,
     scrollToBottom,
     uid, randomInt, randomPick, debounce,
-    escapeHtml,
     downloadFile, readFileAsText
 } from '../utils/dom.js';
 
-import {
-    KEYS, get, set, update, push, removeBy
-} from '../utils/storage.js';
+import { KEYS, get, set, update } from '../utils/storage.js';
 
-import { bus, on, delegate } from '../utils/event.js';
-
-import { mjPrompt, mjConfirm, mjAlert } from '../utils/dialogs.js';
+import { bus } from '../utils/event.js';
 
 
 const CHAT_ID = 'ta';
@@ -128,7 +123,7 @@ function markAllRead() {
 
 
 /* ==========================================================================
-   渲染：聊天列表预览
+   渲染：列表预览
    ========================================================================== */
 
 export function renderChatListPreview() {
@@ -239,34 +234,6 @@ function renderChatMessages() {
     container.setAttribute(RENDERED_FLAG, '1');
 }
 
-    if (empty) empty.hidden = true;
-    Array.from(container.children).forEach((c) => { if (c !== empty) c.remove(); });
-
-    const fragment = document.createDocumentFragment();
-    list.forEach((msg, idx) => {
-        const prev = list[idx - 1];
-       
-        if (!prev || msg.ts - prev.ts > 5 * 60 * 1000) {
-            fragment.appendChild(createTimestampEl(msg.ts));
-        }
-        fragment.appendChild(createMessageEl(msg));
-    });
-
-    const appearance = get(KEYS.CHAT_APPEARANCE);
-    if (appearance.timestamp?.showRead) {
-        const lastMe = [...list].reverse().find((m) => m.role === 'me');
-        if (lastMe && lastMe.read) {
-            const readEl = document.createElement('div');
-            readEl.className = 'chat-read';
-            readEl.textContent = '已读';
-            fragment.appendChild(readEl);
-        }
-    }
-
-    container.appendChild(fragment);
-    container.setAttribute(RENDERED_FLAG, '1');
-}
-
 function createMessageEl(msg) {
     const profile = get(KEYS.PROFILE);
     const row = document.createElement('div');
@@ -363,7 +330,9 @@ export function appendMessage(msg) {
         const empty = byId('chat-empty-state');
         if (empty) empty.hidden = true;
         const prev = list[list.length - 2];
-        if (!prev || full.ts - prev.ts > 5 * 60 * 1000) {
+        const appearance = get(KEYS.CHAT_APPEARANCE);
+        const showTimestamp = appearance.timestamp?.show !== false;
+        if (showTimestamp && (!prev || full.ts - prev.ts > 5 * 60 * 1000)) {
             container.appendChild(createTimestampEl(full.ts));
         }
         container.appendChild(createMessageEl(full));
@@ -539,27 +508,20 @@ function attachMessageContextMenu(el, msg) {
     });
 }
 
-async function showMessageMenu(msg) {
+function showMessageMenu(msg) {
     if (msg.type !== 'text') {
-        const ok = await mjConfirm('删除这条消息？', { title: '删除消息' });
-        if (ok) deleteMessage(msg.id);
+        if (window.confirm('删除这条消息？')) deleteMessage(msg.id);
         return;
     }
-
     const text = msg.content || '';
-    const choice = await mjPrompt('操作这条消息', {
-        placeholder: '1. 复制  2. 收藏  3. 删除',
-        defaultValue: '1',
-        confirmText: '执行'
-    });
+    const choice = window.prompt('输入序号操作：\n1. 复制\n2. 收藏\n3. 删除', '1');
     if (choice === null) return;
 
     const n = parseInt(String(choice).trim(), 10);
     if (n === 1) copyText(text);
     else if (n === 2) addToFavorites(text);
     else if (n === 3) {
-        const ok = await mjConfirm('删除这条消息？', { title: '删除消息' });
-        if (ok) deleteMessage(msg.id);
+        if (window.confirm('删除这条消息？')) deleteMessage(msg.id);
     }
 }
 
@@ -859,6 +821,7 @@ function bindTimestampModal() {
                 timestamp: { ...get(KEYS.CHAT_APPEARANCE).timestamp, show: value }
             });
             applyAppearance();
+            renderChatMessages();
             updateTimestampInfoRow();
         } else if (id === 'read-receipt') {
             update(KEYS.CHAT_APPEARANCE, {
@@ -935,11 +898,8 @@ function bindDataModal() {
 
     const deleteBtn = byId('btn-delete-chat');
     if (deleteBtn) {
-        deleteBtn.addEventListener('click', async () => {
-            const ok = await mjConfirm('确定要删除所有聊天记录吗？此操作不可恢复。', {
-                title: '删除聊天记录'
-            });
-            if (!ok) return;
+        deleteBtn.addEventListener('click', () => {
+            if (!window.confirm('确定要删除所有聊天记录吗？此操作不可恢复。')) return;
             set(KEYS.CHAT, {
                 [CHAT_ID]: { messages: [], lastReadTs: 0, draft: '' }
             });
@@ -1021,7 +981,7 @@ bus.on('switch:change', ({ id, value }) => {
 
 
 /* ==========================================================================
-   打开设置弹窗时同步
+   同步弹窗
    ========================================================================== */
 
 export function syncBubbleModal() {
@@ -1094,11 +1054,8 @@ function clamp(n, min, max) {
 
 export const chatActions = {
 
-    'toggle-emoji-picker': async () => {
-        const emoji = await mjPrompt('输入一个 emoji', {
-            placeholder: '例如 😊',
-            confirmText: '插入'
-        });
+    'toggle-emoji-picker': () => {
+        const emoji = window.prompt('输入一个 emoji：', '😊');
         if (!emoji) return;
         const input = byId('chat-input');
         if (input) {
@@ -1107,12 +1064,8 @@ export const chatActions = {
         }
     },
 
-    'toggle-more-panel': async () => {
-        const choice = await mjPrompt('更多功能', {
-            placeholder: '1. 发送图片  2. 从字卡库选择  3. 发起群聊',
-            defaultValue: '1',
-            confirmText: '执行'
-        });
+    'toggle-more-panel': () => {
+        const choice = window.prompt('输入序号：\n1. 发送图片\n2. 从字卡库选择\n3. 发起群聊', '1');
         if (choice === null) return;
         const n = parseInt(String(choice).trim(), 10);
         if (n === 1) pickAndSendImage();
@@ -1142,11 +1095,8 @@ export const chatActions = {
     'delete-chat': () => byId('btn-delete-chat')?.click(),
     'create-group-chat': () => byId('btn-create-group-chat')?.click(),
 
-    'search-chat': async () => {
-        const kw = await mjPrompt('搜索聊天记录', {
-            placeholder: '输入关键词',
-            confirmText: '搜索'
-        });
+    'search-chat': () => {
+        const kw = window.prompt('搜索聊天记录：', '');
         if (!kw) return;
         const list = getMessages().filter(
             (m) => m.type === 'text' && (m.content || '').includes(kw)
@@ -1156,10 +1106,7 @@ export const chatActions = {
 
     'view-ta-profile': () => {
         const profile = get(KEYS.PROFILE);
-        mjAlert(
-            `名字：${profile.ta.name || 'TA'}\n头像：${profile.ta.avatar ? '已设置' : '默认'}`,
-            { title: 'TA 的资料' }
-        );
+        window.alert(`名字：${profile.ta.name || 'TA'}\n头像：${profile.ta.avatar ? '已设置' : '默认'}`);
     }
 };
 
@@ -1174,7 +1121,7 @@ export const chatNavs = {
 
 
 /* ==========================================================================
-   辅助：发图片 / 字卡
+   辅助
    ========================================================================== */
 
 function pickAndSendImage() {
@@ -1194,7 +1141,7 @@ function pickAndSendImage() {
     input.click();
 }
 
-async function pickFromWordCard() {
+function pickFromWordCard() {
     const wc = get(KEYS.WORD_CARD);
     const pool = [...(wc.main || []), ...(wc.kaomoji || [])];
     if (!pool.length) {
@@ -1202,13 +1149,9 @@ async function pickFromWordCard() {
         return;
     }
     const preview = pool.slice(0, 10).map((c, i) => `${i + 1}. ${c.text}`).join('\n');
-    const ans = await mjPrompt('选择字卡', {
-        placeholder: preview,
-        defaultValue: '1',
-        confirmText: '发送'
-    });
+    const ans = window.prompt(`选择一张字卡（1-${Math.min(10, pool.length)}）：\n${preview}`, '1');
     if (ans === null) return;
-    const idx = parseInt(String(ans).trim(), 10) - 1;
+    const idx = parseInt(ans, 10) - 1;
     if (idx < 0 || idx >= pool.length) return;
     appendMessage({ role: 'me', type: 'text', content: pool[idx].text });
     scheduleAutoReply();
