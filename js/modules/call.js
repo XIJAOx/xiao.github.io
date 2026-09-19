@@ -301,7 +301,7 @@ function endCall(reason) {
         if (duration >= 3) {
             recordCall(duration);
             toast(`通话结束 · 时长 ${formatDuration(duration)}`);
-            bus.emit('chat:call-record', `通话时长 ${formatDuration(duration)}`);
+            bus.emit('chat:call-record', `通话时长 ${formatDurationCN(duration)}`);
         } else {
             bus.emit('chat:call-record', '通话已结束');
         }
