@@ -1110,6 +1110,14 @@ export function refreshChatInfoPage() {
     const bubble = ap.bubble || {};
     const text = ap.text || {};
     const av = ap.avatar || {};
+    const profile = get(KEYS.PROFILE);
+
+    // 同步 TA 名字 + 头像（聊天信息页顶部行）
+    const nameEl = byId('info-row-name');
+    if (nameEl) nameEl.textContent = profile.ta.name || 'TA';
+
+    const avatarEl = byId('info-row-avatar');
+    if (avatarEl) applyAvatarTo(avatarEl, profile.ta.avatar);
 
     syncInfoRowText('info-row-value-bubble', `${bubble.size || 14}px`);
     syncInfoRowText('info-row-value-text', `${text.size || 14}px`);
@@ -1124,15 +1132,6 @@ export function refreshChatInfoPage() {
     setSwitch(byId('switch-mute'), !!ta.mute);
     setSwitch(byId('switch-top'), !!ta.top);
 }
-
-bus.on('switch:change', ({ id, value }) => {
-    if (id === 'mute' || id === 'top') {
-        const info = get(KEYS.CHAT_INFO);
-        info[CHAT_ID] = info[CHAT_ID] || {};
-        info[CHAT_ID][id] = value;
-        set(KEYS.CHAT_INFO, info);
-    }
-});
 
 
 /* ==========================================================================
