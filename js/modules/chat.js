@@ -133,6 +133,13 @@ export function renderChatListPreview() {
     const msgEl = byId('chat-list-last-msg');
     const timeEl = byId('chat-list-time-ta');
     const unreadEl = byId('chat-list-unread-ta');
+    const nameEl = byId('chat-list-name-ta');
+    const avatarEl = byId('chat-list-avatar-ta');
+
+    const profile = get(KEYS.PROFILE);
+
+    if (nameEl) nameEl.textContent = profile.ta.name || 'TA';
+    if (avatarEl) applyAvatarTo(avatarEl, profile.ta.avatar);
 
     if (msgEl) {
         if (!last) msgEl.textContent = '还没有对话哦';
