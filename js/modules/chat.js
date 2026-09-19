@@ -200,20 +200,9 @@ function renderChatMessages() {
         if (child !== empty) child.remove();
     });
 
-    const appearance = get(KEYS.CHAT_APPEARANCE);
-    const showTimestamp = appearance.timestamp?.show !== false;
-    const showRead = !!appearance.timestamp?.showRead;
-
     const fragment = document.createDocumentFragment();
-
-    list.forEach((msg, idx) => {
-        const prev = list[idx - 1];
-
-        if (showTimestamp && (!prev || msg.ts - prev.ts > 5 * 60 * 1000)) {
-            fragment.appendChild(createTimestampEl(msg.ts));
-        }
-
-        fragment.appendChild(createMessageEl(msg, { showRead }));
+    list.forEach((msg) => {
+        fragment.appendChild(createMessageEl(msg));
     });
 
     container.appendChild(fragment);
