@@ -324,6 +324,7 @@ function scrollChatToBottom(smooth = false) {
 /* ==========================================================================
    追加消息
    ========================================================================== */
+
 export function appendMessage(msg) {
     const list = getMessages();
 
