@@ -23,7 +23,6 @@ import { KEYS, get, set, update } from '../utils/storage.js';
 import { bus } from '../utils/event.js';
 
 
-const CHAT_ID = 'ta';
 const RENDERED_FLAG = 'data-rendered';
 const PROACTIVE_COOLDOWN = 60 * 1000;
 const DEFAULT_BUBBLE_COLOR = '#000';
@@ -33,6 +32,97 @@ let _unsubs = [];
 let _replyTimers = [];
 let _lastProactiveAt = 0;
 let _inChatScreen = false;
+
+
+/* ==========================================================================
+   梦角管理
+   ========================================================================== */
+
+function getCharacters() {
+    const data = get(KEYS.CHARACTERS);
+    if (!Array.isArray(data.list) || !data.list.length) {
+        data.list = [{ id: 'ta', name: 'TA', avatar: '', createdAt: Date.now(), isDefault: true }];
+        data.currentId = 'ta';
+        set(KEYS.CHARACTERS, data);
+    }
+    return data;
+}
+
+function getCurrentCharacterId() {
+    return getCharacters().currentId || 'ta';
+}
+
+function getCharacterById(id) {
+    return getCharacters().list.find((c) => c.id === id) || null;
+}
+
+function getCurrentCharacter() {
+    return getCharacterById(getCurrentCharacterId()) ||
+        getCharacters().list[0];
+}
+
+function setCurrentCharacterId(id) {
+    const data = getCharacters();
+    if (!data.list.find((c) => c.id === id)) return;
+    data.currentId = id;
+    set(KEYS.CHARACTERS, data);
+
+    const char = getCharacterById(id);
+    const profile = get(KEYS.PROFILE);
+    profile.ta.name = char.name;
+    profile.ta.avatar = char.avatar || '';
+    set(KEYS.PROFILE, profile);
+
+    bus.emit('profile:update');
+}
+
+function addCharacter(char) {
+    const data = getCharacters();
+    data.list.push(char);
+    set(KEYS.CHARACTERS, data);
+}
+
+function updateCharacter(id, patch) {
+    const data = getCharacters();
+    const char = data.list.find((c) => c.id === id);
+    if (!char) return;
+    Object.assign(char, patch);
+    set(KEYS.CHARACTERS, data);
+
+    if (data.currentId === id) {
+        const profile = get(KEYS.PROFILE);
+        profile.ta.name = char.name;
+        profile.ta.avatar = char.avatar || '';
+        set(KEYS.PROFILE, profile);
+        bus.emit('profile:update');
+    }
+}
+
+function removeCharacter(id) {
+    const data = getCharacters();
+    if (data.list.length <= 1) {
+        toast('至少保留一个梦角');
+        return;
+    }
+    const char = data.list.find((c) => c.id === id);
+    if (char && char.isDefault) {
+        toast('默认梦角不可删除');
+        return;
+    }
+    data.list = data.list.filter((c) => c.id !== id);
+    if (data.currentId === id) {
+        data.currentId = data.list[0].id;
+    }
+    set(KEYS.CHARACTERS, data);
+
+    const chat = get(KEYS.CHAT);
+    if (chat[id]) {
+        delete chat[id];
+        set(KEYS.CHAT, chat);
+    }
+
+    setCurrentCharacterId(data.currentId);
+}
 
 
 /* ==========================================================================
@@ -46,7 +136,7 @@ export function initChat() {
     ensureChatData();
     applyAppearance();
     renderChatHeader();
-    renderChatListPreview();
+    renderChatList();
     renderChatMessages();
     bindInput();
     bindSettingsModals();
@@ -54,8 +144,7 @@ export function initChat() {
     _unsubs.push(
         bus.on('profile:update', () => {
             renderChatHeader();
-            renderChatListPreview();
-            refreshChatInfoPage();
+            renderChatList();
         }),
         bus.on('settings:changed', applyAppearance),
         bus.on('screen:change', ({ id }) => {
@@ -63,6 +152,9 @@ export function initChat() {
             if (_inChatScreen) {
                 markAllRead();
                 scrollChatToBottom(false);
+            }
+            if (id === 'screen-chat-list') {
+                renderChatList();
             }
         }),
         bus.on('chat:system-message', (text) => {
@@ -84,74 +176,183 @@ export function destroyChat() {
 
 
 /* ==========================================================================
-   数据
+   聊天数据
    ========================================================================== */
 
 function ensureChatData() {
     const chat = get(KEYS.CHAT);
-    if (!chat[CHAT_ID]) {
-        chat[CHAT_ID] = { messages: [], lastReadTs: 0, draft: '' };
+    const id = getCurrentCharacterId();
+    if (!chat[id]) {
+        chat[id] = { messages: [], lastReadTs: 0, draft: '' };
         set(KEYS.CHAT, chat);
     }
-    return chat[CHAT_ID];
+    return chat[id];
 }
 
-function getMessages() {
-    return ensureChatData().messages || [];
+function getMessages(id) {
+    const chat = get(KEYS.CHAT);
+    const cid = id || getCurrentCharacterId();
+    return (chat[cid] && chat[cid].messages) || [];
 }
 
 function setMessages(list) {
     const chat = get(KEYS.CHAT);
-    chat[CHAT_ID].messages = list;
+    const id = getCurrentCharacterId();
+    if (!chat[id]) chat[id] = { messages: [], lastReadTs: 0, draft: '' };
+    chat[id].messages = list;
     set(KEYS.CHAT, chat);
 }
 
-function getLastMessage() {
-    const list = getMessages();
+function getLastMessage(id) {
+    const list = getMessages(id);
     return list.length ? list[list.length - 1] : null;
 }
 
-function getUnreadCount() {
-    const list = getMessages();
-    const { lastReadTs } = ensureChatData();
-    return list.filter((m) => m.role === 'ta' && m.ts > lastReadTs).length;
+function getUnreadCount(id) {
+    const chat = get(KEYS.CHAT);
+    const cid = id || getCurrentCharacterId();
+    const c = chat[cid] || { messages: [], lastReadTs: 0 };
+    return (c.messages || []).filter((m) => m.role === 'ta' && m.ts > (c.lastReadTs || 0)).length;
 }
 
 function markAllRead() {
     const chat = get(KEYS.CHAT);
-    chat[CHAT_ID].lastReadTs = Date.now();
+    const id = getCurrentCharacterId();
+    if (!chat[id]) return;
+    chat[id].lastReadTs = Date.now();
     set(KEYS.CHAT, chat);
-    renderChatListPreview();
+    renderChatList();
 }
 
 
 /* ==========================================================================
-   渲染：列表预览
+   渲染：聊天列表
    ========================================================================== */
 
-export function renderChatListPreview() {
-    const last = getLastMessage();
-    const msgEl = byId('chat-list-last-msg');
-    const timeEl = byId('chat-list-time-ta');
-    const unreadEl = byId('chat-list-unread-ta');
-    const nameEl = byId('chat-list-name-ta');
-    const avatarEl = byId('chat-list-avatar-ta');
+export function renderChatList() {
+    const container = byId('chat-list-container');
+    if (!container) return;
 
-    const profile = get(KEYS.PROFILE);
+    const data = getCharacters();
+    const currentId = data.currentId;
 
-    if (nameEl) nameEl.textContent = profile.ta.name || 'TA';
-    if (avatarEl) applyAvatarTo(avatarEl, profile.ta.avatar);
+    container.innerHTML = '';
 
-    if (msgEl) {
-        if (!last) msgEl.textContent = '还没有对话哦';
-        else if (last.type === 'image') msgEl.textContent = '[图片]';
-        else if (last.type === 'voice') msgEl.textContent = '[语音]';
-        else msgEl.textContent = last.content || '';
-    }
-    if (timeEl) timeEl.textContent = last ? formatChatTime(last.ts) : '';
-    if (unreadEl) {
-        const c = getUnreadCount();
-        unreadEl.textContent = c > 0 ? String(c) : '';
+    data.list.forEach((char) => {
+        const last = getLastMessage(char.id);
+        const unread = getUnreadCount(char.id);
+        const isCurrent = char.id === currentId;
+
+        const btn = document.createElement('button');
+        btn.className = 'list-item list-item-ta';
+        btn.dataset.chatId = char.id;
+        btn.setAttribute('aria-label', `与 ${char.name} 的聊天`);
+
+        const avatar = document.createElement('div');
+        avatar.className = 'list-avatar';
+        applyAvatarTo(avatar, char.avatar);
+        btn.appendChild(avatar);
+
+        const info = document.createElement('div');
+        info.className = 'list-info';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'list-name';
+        nameEl.textContent = char.name + (isCurrent ? '' : '');
+        info.appendChild(nameEl);
+
+        const msgEl = document.createElement('div');
+        msgEl.className = 'list-msg';
+        if (!last) {
+            msgEl.textContent = '还没有对话哦';
+        } else if (last.type === 'image') {
+            msgEl.textContent = '[图片]';
+        } else if (last.type === 'voice') {
+            msgEl.textContent = '[语音]';
+        } else {
+            msgEl.textContent = last.content || '';
+        }
+        info.appendChild(msgEl);
+
+        btn.appendChild(info);
+
+        const meta = document.createElement('div');
+        meta.className = 'list-meta';
+
+        const timeEl = document.createElement('span');
+        timeEl.className = 'list-time';
+        timeEl.textContent = last ? formatChatTime(last.ts) : '';
+        meta.appendChild(timeEl);
+
+        if (unread > 0) {
+            const unreadEl = document.createElement('span');
+            unreadEl.className = 'list-unread';
+            unreadEl.textContent = String(unread);
+            meta.appendChild(unreadEl);
+        }
+
+        btn.appendChild(meta);
+
+        btn.addEventListener('click', () => {
+            if (!isCurrent) {
+                setCurrentCharacterId(char.id);
+                applyAppearance();
+            }
+            ensureChatData();
+            renderChatHeader();
+            renderChatMessages();
+            showScreen('screen-chat');
+            bus.emit('screen:change', { id: 'screen-chat', name: 'chat' });
+        });
+
+        attachCharacterContextMenu(btn, char);
+
+        container.appendChild(btn);
+    });
+}
+
+function attachCharacterContextMenu(el, char) {
+    let pressTimer = null;
+
+    const start = () => {
+        pressTimer = setTimeout(() => showCharacterMenu(char), 600);
+    };
+    const cancel = () => {
+        if (pressTimer) clearTimeout(pressTimer);
+        pressTimer = null;
+    };
+
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchend', cancel);
+    el.addEventListener('touchmove', cancel);
+    el.addEventListener('touchcancel', cancel);
+
+    el.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        cancel();
+        showCharacterMenu(char);
+    });
+}
+
+async function showCharacterMenu(char) {
+    const choice = await mjPrompt('输入序号：\n1. 编辑资料\n2. 删除梦角', {
+        title: char.name,
+        defaultValue: '1',
+        confirmText: '执行'
+    });
+    if (choice === null) return;
+
+    const n = parseInt(String(choice).trim(), 10);
+    if (n === 1) openCharacterEditor(char);
+    else if (n === 2) {
+        const ok = await mjConfirm(`确定删除「${char.name}」吗？聊天记录将一并删除。`, {
+            title: '删除梦角'
+        });
+        if (ok) {
+            removeCharacter(char.id);
+            renderChatList();
+            toast('已删除');
+        }
     }
 }
 
@@ -159,9 +360,7 @@ export function renderChatListPreview() {
 /* ==========================================================================
    渲染：聊天头
    ========================================================================== */
-/**
- * 把头像图片应用到容器里（没图就用原有 svg）
- */
+
 function applyAvatarTo(wrap, src) {
     if (!wrap) return;
     const oldImg = wrap.querySelector('img.mj-avatar-img');
@@ -186,36 +385,17 @@ function applyAvatarTo(wrap, src) {
 }
 
 function renderChatHeader() {
-    const profile = get(KEYS.PROFILE);
+    const char = getCurrentCharacter();
     const nameEl = byId('chat-header-name');
-    if (nameEl) nameEl.textContent = profile.ta.name || 'TA';
+    if (nameEl) nameEl.textContent = char.name || 'TA';
 
     const circle = byId('chat-header-avatar');
-    if (circle) {
-        const oldImg = circle.querySelector('img.mj-avatar-img');
-        const svg = circle.querySelector('svg');
-        if (profile.ta.avatar) {
-            let img = oldImg;
-            if (!img) {
-                img = document.createElement('img');
-                img.className = 'mj-avatar-img';
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'cover';
-                circle.appendChild(img);
-            }
-            img.src = profile.ta.avatar;
-            if (svg) svg.style.display = 'none';
-        } else {
-            if (oldImg) oldImg.remove();
-            if (svg) svg.style.display = '';
-        }
-    }
+    if (circle) applyAvatarTo(circle, char.avatar);
 }
 
 
 /* ==========================================================================
-   时间格式化（气泡下方）
+   时间格式化
    ========================================================================== */
 
 function formatTimeInline(ts, format) {
@@ -264,6 +444,7 @@ function renderChatMessages() {
 }
 
 function createMessageEl(msg) {
+    const char = getCurrentCharacter();
     const profile = get(KEYS.PROFILE);
     const appearance = get(KEYS.CHAT_APPEARANCE);
     const showTime = appearance.timestamp?.show !== false;
@@ -276,7 +457,7 @@ function createMessageEl(msg) {
 
     const avatar = document.createElement('div');
     avatar.className = 'chat-row-avatar';
-    const avatarSrc = msg.role === 'me' ? profile.me.avatar : profile.ta.avatar;
+    const avatarSrc = msg.role === 'me' ? profile.me.avatar : char.avatar;
     avatar.appendChild(createAvatarContent(avatarSrc));
     row.appendChild(avatar);
 
@@ -387,7 +568,7 @@ export function appendMessage(msg) {
         scrollChatToBottom(true);
     }
 
-    renderChatListPreview();
+    renderChatList();
     bus.emit('chat:new-message', full);
     return full;
 }
@@ -410,7 +591,8 @@ function bindInput() {
 
     const saveDraft = debounce((val) => {
         const c = get(KEYS.CHAT);
-        c[CHAT_ID].draft = val;
+        const id = getCurrentCharacterId();
+        c[id].draft = val;
         set(KEYS.CHAT, c);
     }, 400);
 
@@ -425,7 +607,8 @@ function bindInput() {
 
     input.addEventListener('blur', () => {
         const c = get(KEYS.CHAT);
-        c[CHAT_ID].draft = input.value;
+        const id = getCurrentCharacterId();
+        c[id].draft = input.value;
         set(KEYS.CHAT, c);
     });
 }
@@ -439,9 +622,10 @@ export function sendCurrentInput() {
     appendMessage({ role: 'me', type: 'text', content: text });
 
     input.value = '';
-    const chat = get(KEYS.CHAT);
-    chat[CHAT_ID].draft = '';
-    set(KEYS.CHAT, chat);
+    const c = get(KEYS.CHAT);
+    const id = getCurrentCharacterId();
+    c[id].draft = '';
+    set(KEYS.CHAT, c);
 
     scheduleAutoReply();
 }
@@ -476,19 +660,25 @@ function scheduleAutoReply() {
     const maxCount = Math.max(minCount, Number(replyCfg.maxCount) || 3);
     const totalCount = randomInt(minCount, maxCount);
 
+    const targetId = getCurrentCharacterId();
+
     for (let i = 0; i < totalCount; i++) {
         const delay = (delaySec * 1000) + i * randomInt(500, 1500);
         const timer = setTimeout(() => {
             const text = generateReplyText();
+            if (getCurrentCharacterId() !== targetId) return;
+
             appendMessage({ role: 'ta', type: 'text', content: text });
             if (i === totalCount - 1) {
                 const chat = get(KEYS.CHAT);
-                chat[CHAT_ID].lastReadTs = Date.now();
-                chat[CHAT_ID].messages.forEach((m) => {
-                    if (m.role === 'me') m.read = true;
-                });
-                set(KEYS.CHAT, chat);
-                renderChatMessages();
+                if (chat[targetId]) {
+                    chat[targetId].lastReadTs = Date.now();
+                    chat[targetId].messages.forEach((m) => {
+                        if (m.role === 'me') m.read = true;
+                    });
+                    set(KEYS.CHAT, chat);
+                    renderChatMessages();
+                }
             }
         }, delay);
         _replyTimers.push(timer);
@@ -614,7 +804,7 @@ function deleteMessage(id) {
     const list = getMessages().filter((m) => m.id !== id);
     setMessages(list);
     renderChatMessages();
-    renderChatListPreview();
+    renderChatList();
     toast('已删除');
 }
 
@@ -960,7 +1150,7 @@ function bindDataModal() {
                     set(KEYS.CHAT, data);
                     ensureChatData();
                     renderChatMessages();
-                    renderChatListPreview();
+                    renderChatList();
                     toast('聊天记录已导入');
                     closeModal('modal-data');
                 } catch (err) {
@@ -974,15 +1164,16 @@ function bindDataModal() {
     const deleteBtn = byId('btn-delete-chat');
     if (deleteBtn) {
         deleteBtn.addEventListener('click', async () => {
-            const ok = await mjConfirm('确定要删除所有聊天记录吗？此操作不可恢复。', {
+            const ok = await mjConfirm('确定要删除当前梦角的聊天记录吗？', {
                 title: '删除聊天记录'
             });
             if (!ok) return;
-            set(KEYS.CHAT, {
-                [CHAT_ID]: { messages: [], lastReadTs: 0, draft: '' }
-            });
+            const chat = get(KEYS.CHAT);
+            const id = getCurrentCharacterId();
+            chat[id] = { messages: [], lastReadTs: 0, draft: '' };
+            set(KEYS.CHAT, chat);
             renderChatMessages();
-            renderChatListPreview();
+            renderChatList();
             toast('聊天记录已删除');
             closeModal('modal-data');
         });
@@ -1013,43 +1204,47 @@ function bindGroupChatModal() {
 
 
 /* ==========================================================================
-   TA 资料编辑
+   梦角编辑器
    ========================================================================== */
 
-function openTaProfileEditor() {
-    const profile = get(KEYS.PROFILE);
-    let tempAvatar = profile.ta.avatar || '';
+function openAddCharacterDialog() {
+    openCharacterEditor(null);
+}
+
+function openCharacterEditor(char) {
+    const isNew = !char;
+    let tempAvatar = char ? (char.avatar || '') : '';
+    let tempName = char ? (char.name || '') : '';
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay active';
-    overlay.id = 'modal-ta-profile';
     overlay.innerHTML = `
         <div class="modal" style="max-width: 340px;">
             <div class="modal-header">
-                <h2 class="modal-title">TA 的资料</h2>
+                <h2 class="modal-title">${isNew ? '添加梦角' : '编辑梦角'}</h2>
                 <button class="modal-close" data-role="close" aria-label="关闭">✕</button>
             </div>
 
             <div class="ta-profile-row">
-                <div class="ta-profile-avatar" id="ta-profile-avatar"></div>
+                <div class="ta-profile-avatar" id="char-editor-avatar"></div>
                 <input type="text" class="form-input ta-profile-name"
-                    id="ta-profile-name"
-                    placeholder="输入昵称"
-                    value="${escapeHtml(profile.ta.name || 'TA')}"
+                    id="char-editor-name"
+                    placeholder="梦角昵称"
+                    value="${escapeHtml(tempName)}"
                     maxlength="20"
-                    aria-label="TA 昵称">
+                    aria-label="昵称">
             </div>
 
-            <button class="upload-btn" id="btn-upload-ta-avatar" type="button">📁 上传头像</button>
+            <button class="upload-btn" id="btn-char-editor-upload" type="button">📁 上传头像</button>
 
             <div class="modal-actions">
                 <button class="modal-btn secondary" data-role="close">取消</button>
-                <button class="modal-btn primary" data-role="save">保存</button>
+                <button class="modal-btn primary" data-role="save">${isNew ? '添加' : '保存'}</button>
             </div>
         </div>
     `;
 
-    const avatarEl = overlay.querySelector('#ta-profile-avatar');
+    const avatarEl = overlay.querySelector('#char-editor-avatar');
     const renderAvatar = () => {
         if (tempAvatar) {
             avatarEl.innerHTML = '';
@@ -1067,7 +1262,7 @@ function openTaProfileEditor() {
     };
     renderAvatar();
 
-    overlay.querySelector('#btn-upload-ta-avatar').addEventListener('click', () => {
+    overlay.querySelector('#btn-char-editor-upload').addEventListener('click', () => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
@@ -1090,27 +1285,42 @@ function openTaProfileEditor() {
     });
 
     overlay.querySelector('[data-role="save"]').addEventListener('click', () => {
-        const nameInput = overlay.querySelector('#ta-profile-name');
-        const newName = (nameInput.value || '').trim() || 'TA';
+        const nameInput = overlay.querySelector('#char-editor-name');
+        const newName = (nameInput.value || '').trim();
+        if (!newName) {
+            toast('请输入昵称');
+            return;
+        }
 
-        const data = get(KEYS.PROFILE);
-        data.ta.name = newName;
-        data.ta.avatar = tempAvatar;
-        set(KEYS.PROFILE, data);
+        if (isNew) {
+            const newChar = {
+                id: uid('char'),
+                name: newName,
+                avatar: tempAvatar,
+                createdAt: Date.now()
+            };
+            addCharacter(newChar);
 
-        bus.emit('profile:update');
+            setCurrentCharacterId(newChar.id);
+            renderChatHeader();
+            renderChatMessages();
+            renderChatList();
 
-        renderChatHeader();
-        renderChatListPreview();
+            toast(`已添加「${newName}」`);
+        } else {
+            updateCharacter(char.id, { name: newName, avatar: tempAvatar });
+            renderChatHeader();
+            renderChatList();
+            toast('已保存');
+        }
 
         close();
-        toast('资料已更新');
     });
 
     document.body.appendChild(overlay);
 
     setTimeout(() => {
-        overlay.querySelector('#ta-profile-name')?.focus();
+        overlay.querySelector('#char-editor-name')?.focus();
     }, 120);
 }
 
@@ -1136,14 +1346,13 @@ export function refreshChatInfoPage() {
     const bubble = ap.bubble || {};
     const text = ap.text || {};
     const av = ap.avatar || {};
-    const profile = get(KEYS.PROFILE);
+    const char = getCurrentCharacter();
 
-    // 同步 TA 名字 + 头像（聊天信息页顶部行）
     const nameEl = byId('info-row-name');
-    if (nameEl) nameEl.textContent = profile.ta.name || 'TA';
+    if (nameEl) nameEl.textContent = char.name || 'TA';
 
     const avatarEl = byId('info-row-avatar');
-    if (avatarEl) applyAvatarTo(avatarEl, profile.ta.avatar);
+    if (avatarEl) applyAvatarTo(avatarEl, char.avatar);
 
     syncInfoRowText('info-row-value-bubble', `${bubble.size || 14}px`);
     syncInfoRowText('info-row-value-text', `${text.size || 14}px`);
@@ -1154,10 +1363,21 @@ export function refreshChatInfoPage() {
     updateTimestampInfoRow();
 
     const info = get(KEYS.CHAT_INFO);
-    const ta = info[CHAT_ID] || {};
+    const id = getCurrentCharacterId();
+    const ta = info[id] || {};
     setSwitch(byId('switch-mute'), !!ta.mute);
     setSwitch(byId('switch-top'), !!ta.top);
 }
+
+bus.on('switch:change', ({ id, value }) => {
+    if (id === 'mute' || id === 'top') {
+        const info = get(KEYS.CHAT_INFO);
+        const cid = getCurrentCharacterId();
+        info[cid] = info[cid] || {};
+        info[cid][id] = value;
+        set(KEYS.CHAT_INFO, info);
+    }
+});
 
 
 /* ==========================================================================
@@ -1262,7 +1482,7 @@ export const chatActions = {
     },
 
     'start-call': () => {
-        bus.emit('call:start', { name: get(KEYS.PROFILE).ta.name || 'TA' });
+        bus.emit('call:start', { name: getCurrentCharacter().name || 'TA' });
     },
 
     'open-bg-settings':        () => { syncBgModal(); openModal('modal-bg'); },
@@ -1284,24 +1504,57 @@ export const chatActions = {
     'create-group-chat': () => byId('btn-create-group-chat')?.click(),
 
     'search-chat': async () => {
-        const kw = await mjPrompt('搜索聊天记录', {
+        const kw = await mjPrompt('搜索梦角或聊天记录', {
             title: '搜索',
             placeholder: '输入关键词',
             confirmText: '搜索'
         });
         if (!kw) return;
-        const list = getMessages().filter(
-            (m) => m.type === 'text' && (m.content || '').includes(kw)
-        );
-        toast(`找到 ${list.length} 条包含"${kw}"的消息`);
+
+        const chars = getCharacters().list;
+        const matchedChars = chars.filter((c) => (c.name || '').includes(kw));
+
+        const matchedMsgs = [];
+        const chat = get(KEYS.CHAT);
+        chars.forEach((c) => {
+            const list = (chat[c.id] && chat[c.id].messages) || [];
+            list.forEach((m) => {
+                if (m.type === 'text' && (m.content || '').includes(kw)) {
+                    matchedMsgs.push({ char: c, msg: m });
+                }
+            });
+        });
+
+        if (!matchedChars.length && !matchedMsgs.length) {
+            toast(`没找到包含"${kw}"的内容`);
+            return;
+        }
+
+        let msg = '';
+        if (matchedChars.length) {
+            msg += `梦角：${matchedChars.map((c) => c.name).join('、')}\n\n`;
+        }
+        if (matchedMsgs.length) {
+            msg += `消息：${matchedMsgs.length} 条`;
+        }
+        await mjAlert(msg, { title: '搜索结果' });
     },
 
-    'view-ta-profile': () => openTaProfileEditor()
+    'view-ta-profile': () => openCharacterEditor(getCurrentCharacter()),
+
+    'add-character': () => openAddCharacterDialog()
 };
 
 export const chatNavs = {
-    'chat-list': () => showScreen('screen-chat-list'),
-    'chat':      () => showScreen('screen-chat'),
+    'chat-list': () => {
+        renderChatList();
+        showScreen('screen-chat-list');
+    },
+    'chat':      () => {
+        renderChatHeader();
+        renderChatMessages();
+        showScreen('screen-chat');
+    },
     'chat-info': () => {
         refreshChatInfoPage();
         showScreen('screen-chat-info');
@@ -1363,7 +1616,8 @@ export default {
     sendCurrentInput,
     triggerProactiveMessage,
     startProactiveLoop,
-    renderChatListPreview,
+    renderChatList,
+    renderChatListPreview: renderChatList,
     refreshChatInfoPage,
     applyAppearance,
     syncBubbleModal,
