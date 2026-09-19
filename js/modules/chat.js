@@ -304,9 +304,7 @@ export function renderChatList() {
             showScreen('screen-chat');
             bus.emit('screen:change', { id: 'screen-chat', name: 'chat' });
         });
-
-        attachCharacterContextMenu(btn, char);
-
+       
         container.appendChild(btn);
     });
 }
