@@ -1704,7 +1704,7 @@ table {
 /* 消息行（由 JS 渲染） */
 .chat-row {
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: var(--s-5);
     max-width: 100%;
 }
