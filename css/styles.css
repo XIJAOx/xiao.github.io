@@ -5189,28 +5189,21 @@ select:focus-visible,
    ========================================================================== */
 
 .chat-bubble-wrap {
-    display: flex;
-    flex-direction: column;
+    position: relative;
     max-width: 72%;
     min-width: 0;
-}
-
-.chat-bubble-wrap.me {
-    align-items: flex-end;
-}
-
-.chat-bubble-wrap.ta {
-    align-items: flex-start;
 }
 
 .chat-bubble-wrap .chat-bubble {
     max-width: 100%;
 }
 
+/* 已读/未读绝对定位到气泡下方 → 不影响头像对齐 */
 .chat-read-inline {
-    margin-top: 3px;
-    margin-right: 6px;
-    font-size: 11px;
+    position: absolute;
+    bottom: -15px;
+    right: 6px;
+    font-size: 10px;
     line-height: 1;
     color: var(--c-text-4);
     white-space: nowrap;
