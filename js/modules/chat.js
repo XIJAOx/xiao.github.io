@@ -13,7 +13,7 @@ import {
     formatChatTime, formatDuration, formatDate,
     scrollToBottom,
     uid, randomInt, randomPick, debounce,
-    downloadFile, readFileAsText
+    downloadFile, readFileAsText,
     mjConfirm, mjPrompt, mjAlert
 } from '../utils/dom.js';
 
@@ -204,7 +204,6 @@ function renderChatMessages() {
     const showTimestamp = appearance.timestamp?.show !== false;
     const showRead = !!appearance.timestamp?.showRead;
 
-    // 最后一条我方消息
     const lastMe = [...list].reverse().find((m) => m.role === 'me');
     const lastMeTs = lastMe ? lastMe.ts : 0;
 
@@ -219,7 +218,6 @@ function renderChatMessages() {
 
         fragment.appendChild(createMessageEl(msg));
 
-        // 已读/未读：只加在最后一条我方消息下方
         if (showRead && msg.role === 'me' && msg.ts === lastMeTs) {
             const readEl = document.createElement('div');
             readEl.className = 'chat-read';
@@ -435,7 +433,6 @@ function scheduleAutoReply() {
             const text = generateReplyText();
             appendMessage({ role: 'ta', type: 'text', content: text });
             if (i === totalCount - 1) {
-                // TA 回复完后，把我方所有消息标记为已读
                 const chat = get(KEYS.CHAT);
                 chat[CHAT_ID].lastReadTs = Date.now();
                 chat[CHAT_ID].messages.forEach((m) => {
@@ -514,20 +511,27 @@ function attachMessageContextMenu(el, msg) {
     });
 }
 
-function showMessageMenu(msg) {
+async function showMessageMenu(msg) {
     if (msg.type !== 'text') {
-        if (window.confirm('删除这条消息？')) deleteMessage(msg.id);
+        const ok = await mjConfirm('删除这条消息？', { title: '删除消息' });
+        if (ok) deleteMessage(msg.id);
         return;
     }
+
     const text = msg.content || '';
-    const choice = window.prompt('输入序号操作：\n1. 复制\n2. 收藏\n3. 删除', '1');
+    const choice = await mjPrompt('输入序号操作：\n1. 复制\n2. 收藏\n3. 删除', {
+        title: '操作消息',
+        defaultValue: '1',
+        confirmText: '执行'
+    });
     if (choice === null) return;
 
     const n = parseInt(String(choice).trim(), 10);
     if (n === 1) copyText(text);
     else if (n === 2) addToFavorites(text);
     else if (n === 3) {
-        if (window.confirm('删除这条消息？')) deleteMessage(msg.id);
+        const ok = await mjConfirm('删除这条消息？', { title: '删除消息' });
+        if (ok) deleteMessage(msg.id);
     }
 }
 
@@ -904,8 +908,11 @@ function bindDataModal() {
 
     const deleteBtn = byId('btn-delete-chat');
     if (deleteBtn) {
-        deleteBtn.addEventListener('click', () => {
-            if (!window.confirm('确定要删除所有聊天记录吗？此操作不可恢复。')) return;
+        deleteBtn.addEventListener('click', async () => {
+            const ok = await mjConfirm('确定要删除所有聊天记录吗？此操作不可恢复。', {
+                title: '删除聊天记录'
+            });
+            if (!ok) return;
             set(KEYS.CHAT, {
                 [CHAT_ID]: { messages: [], lastReadTs: 0, draft: '' }
             });
@@ -1060,8 +1067,12 @@ function clamp(n, min, max) {
 
 export const chatActions = {
 
-    'toggle-emoji-picker': () => {
-        const emoji = window.prompt('输入一个 emoji：', '😊');
+    'toggle-emoji-picker': async () => {
+        const emoji = await mjPrompt('输入一个 emoji', {
+            title: '插入表情',
+            placeholder: '例如 😊',
+            confirmText: '插入'
+        });
         if (!emoji) return;
         const input = byId('chat-input');
         if (input) {
@@ -1070,8 +1081,12 @@ export const chatActions = {
         }
     },
 
-    'toggle-more-panel': () => {
-        const choice = window.prompt('输入序号：\n1. 发送图片\n2. 从字卡库选择\n3. 发起群聊', '1');
+    'toggle-more-panel': async () => {
+        const choice = await mjPrompt('输入序号：\n1. 发送图片\n2. 从字卡库选择\n3. 发起群聊', {
+            title: '更多功能',
+            defaultValue: '1',
+            confirmText: '执行'
+        });
         if (choice === null) return;
         const n = parseInt(String(choice).trim(), 10);
         if (n === 1) pickAndSendImage();
@@ -1101,8 +1116,12 @@ export const chatActions = {
     'delete-chat': () => byId('btn-delete-chat')?.click(),
     'create-group-chat': () => byId('btn-create-group-chat')?.click(),
 
-    'search-chat': () => {
-        const kw = window.prompt('搜索聊天记录：', '');
+    'search-chat': async () => {
+        const kw = await mjPrompt('搜索聊天记录', {
+            title: '搜索',
+            placeholder: '输入关键词',
+            confirmText: '搜索'
+        });
         if (!kw) return;
         const list = getMessages().filter(
             (m) => m.type === 'text' && (m.content || '').includes(kw)
@@ -1112,7 +1131,10 @@ export const chatActions = {
 
     'view-ta-profile': () => {
         const profile = get(KEYS.PROFILE);
-        window.alert(`名字：${profile.ta.name || 'TA'}\n头像：${profile.ta.avatar ? '已设置' : '默认'}`);
+        mjAlert(
+            `名字：${profile.ta.name || 'TA'}\n头像：${profile.ta.avatar ? '已设置' : '默认'}`,
+            { title: 'TA 的资料' }
+        );
     }
 };
 
@@ -1147,7 +1169,7 @@ function pickAndSendImage() {
     input.click();
 }
 
-function pickFromWordCard() {
+async function pickFromWordCard() {
     const wc = get(KEYS.WORD_CARD);
     const pool = [...(wc.main || []), ...(wc.kaomoji || [])];
     if (!pool.length) {
@@ -1155,9 +1177,13 @@ function pickFromWordCard() {
         return;
     }
     const preview = pool.slice(0, 10).map((c, i) => `${i + 1}. ${c.text}`).join('\n');
-    const ans = window.prompt(`选择一张字卡（1-${Math.min(10, pool.length)}）：\n${preview}`, '1');
+    const ans = await mjPrompt(`选择一张字卡（1-${Math.min(10, pool.length)}）\n${preview}`, {
+        title: '选择字卡',
+        defaultValue: '1',
+        confirmText: '发送'
+    });
     if (ans === null) return;
-    const idx = parseInt(ans, 10) - 1;
+    const idx = parseInt(String(ans).trim(), 10) - 1;
     if (idx < 0 || idx >= pool.length) return;
     appendMessage({ role: 'me', type: 'text', content: pool[idx].text });
     scheduleAutoReply();
