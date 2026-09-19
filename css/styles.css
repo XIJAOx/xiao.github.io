@@ -5185,39 +5185,37 @@ select:focus-visible,
 .dev-btn { display: none !important; }
 
 /* ==========================================================================
-   气泡右下角的已读/未读
+   气泡右下角的已读/未读（气泡外部）
    ========================================================================== */
 
-.chat-bubble {
-    position: relative;
+.chat-bubble-wrap {
+    display: flex;
+    flex-direction: column;
+    max-width: 72%;
+    min-width: 0;
 }
 
-/* 纯文字气泡：底部留出空间给已读/未读 */
-.chat-bubble.me:not(.chat-bubble-image):not(.chat-bubble-voice) {
-    padding-bottom: 22px;
+.chat-bubble-wrap.me {
+    align-items: flex-end;
+}
+
+.chat-bubble-wrap.ta {
+    align-items: flex-start;
+}
+
+.chat-bubble-wrap .chat-bubble {
+    max-width: 100%;
 }
 
 .chat-read-inline {
-    position: absolute;
-    right: 10px;
-    bottom: 4px;
-    font-size: 10px;
+    margin-top: 3px;
+    margin-right: 6px;
+    font-size: 11px;
     line-height: 1;
-    opacity: 0.6;
+    color: var(--c-text-4);
     white-space: nowrap;
     pointer-events: none;
     user-select: none;
-}
-
-/* 图片气泡：已读/未读显示在半透明黑底上，方便看清 */
-.chat-bubble-image .chat-read-inline {
-    right: 6px;
-    bottom: 6px;
-    padding: 2px 6px;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.45);
-    color: #fff;
-    opacity: 1;
 }
 
 /* ---------- 22.13 结束 ---------- */
