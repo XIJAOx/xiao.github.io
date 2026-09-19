@@ -209,9 +209,13 @@ function renderChatMessages() {
     container.setAttribute(RENDERED_FLAG, '1');
 }
 
-function createMessageEl(msg, options = {}) {
-    const { showRead = false } = options;
+function createMessageEl(msg) {
     const profile = get(KEYS.PROFILE);
+    const appearance = get(KEYS.CHAT_APPEARANCE);
+    const showTime = appearance.timestamp?.show !== false;
+    const showRead = !!appearance.timestamp?.showRead && msg.role === 'me';
+    const timeFormat = appearance.timestamp?.format || 'hm';
+
     const row = document.createElement('div');
     row.className = `chat-row ${msg.role === 'me' ? 'me' : 'ta'}`;
     row.dataset.msgId = msg.id;
@@ -222,7 +226,6 @@ function createMessageEl(msg, options = {}) {
     avatar.appendChild(createAvatarContent(avatarSrc));
     row.appendChild(avatar);
 
-    // 用 wrap 包住气泡和已读标记
     const wrap = document.createElement('div');
     wrap.className = `chat-bubble-wrap ${msg.role === 'me' ? 'me' : 'ta'}`;
 
@@ -250,12 +253,24 @@ function createMessageEl(msg, options = {}) {
 
     wrap.appendChild(bubble);
 
-    // 已读/未读 → 气泡外部右下角
-    if (showRead && msg.role === 'me') {
-        const readEl = document.createElement('span');
-        readEl.className = 'chat-read-inline';
-        readEl.textContent = msg.read ? '已读' : '未读';
-        wrap.appendChild(readEl);
+    // 气泡下方右侧：时间戳 + 已读/未读
+    if (showTime || showRead) {
+        const metaRow = document.createElement('div');
+        metaRow.className = 'chat-meta-row';
+
+        if (showTime) {
+            const timeEl = document.createElement('span');
+            timeEl.className = 'chat-time-inline';
+            timeEl.textContent = formatTimeInline(msg.ts, timeFormat);
+            metaRow.appendChild(timeEl);
+        }
+        if (showRead) {
+            const readEl = document.createElement('span');
+            readEl.className = 'chat-read-inline';
+            readEl.textContent = msg.read ? '已读' : '未读';
+            metaRow.appendChild(readEl);
+        }
+        wrap.appendChild(metaRow);
     }
 
     attachMessageContextMenu(bubble, msg);
