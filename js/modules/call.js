@@ -296,9 +296,11 @@ function endCall(reason) {
     } else if (reason === 'rejected') {
         const line = randomPick(REJECT_LINES);
         toast(line);
+    } else if (reason === 'cancelled') {
+    toast('已取消');
     } else if (reason === 'missed') {
-        toast('对方未接听');
-        bus.emit('chat:system-message', '刚才给你打了个电话，没接通~');
+    toast('对方未接听');
+    bus.emit('chat:system-message', '刚才给你打了个电话，没接通~');
     }
 
     _state = 'idle';
