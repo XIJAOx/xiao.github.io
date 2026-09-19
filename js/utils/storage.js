@@ -124,6 +124,7 @@ export const KEYS = {
 
     /* ---- 其他 ---- */
     CALL:            'call',           // 通话记录
+    CHARACTERS:      'characters',    // 梦角列表
     PROFILE:         'profile',        // TA 与我的资料（名字/头像等）
     WATER:           'water',          // 喝水记录（留一个别名方便）
     META:            'meta'            // 应用元信息（版本、首次打开时间）
