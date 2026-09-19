@@ -1148,7 +1148,7 @@ table {
     right: -6px;
     bottom: -18px;
     font-size: 74px;
-    color: rgba(255, 107, 138, 0.1);
+    color: rgba(77, 171, 247, 0.12);
     pointer-events: none;
 }
 
@@ -1182,7 +1182,7 @@ table {
 }
 
 .card-label-love {
-    color: #e8556f;
+    color: #339af0;
 }
 
 .card-label-memo {
@@ -1215,7 +1215,7 @@ table {
     padding: var(--s-9) var(--s-10);
     margin-bottom: var(--s-12);
     border-radius: var(--r-xl);
-    background: linear-gradient(135deg, #fff, #fff7f9);
+    background: linear-gradient(135deg, #fff, #f0f8ff);
     box-shadow: var(--sh-sm);
 }
 
@@ -2577,11 +2577,11 @@ table {
 }
 
 .stat-card-my {
-    background: linear-gradient(135deg, #7c8cff, #5f6fe0);
+    background: linear-gradient(135deg, #a5b4fc, #7c8cff);
 }
 
 .stat-card-ta {
-    background: linear-gradient(135deg, #ff9fb5, #ff6b8a);
+    background: linear-gradient(135deg, #74c0fc, #4dabf7);
 }
 
 .stat-card-label {
