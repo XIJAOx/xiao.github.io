@@ -5185,7 +5185,7 @@ select:focus-visible,
 .dev-btn { display: none !important; }
 
 /* ==========================================================================
-   气泡右下角的已读/未读（气泡外部）
+   气泡下方右侧：时间戳 + 已读/未读
    ========================================================================== */
 
 .chat-bubble-wrap {
@@ -5198,11 +5198,16 @@ select:focus-visible,
     max-width: 100%;
 }
 
-/* 已读/未读绝对定位到气泡下方 → 不影响头像对齐 */
-.chat-read-inline {
+.chat-meta-row {
     position: absolute;
-    bottom: -15px;
-    right: 6px;
+    left: 0;
+    right: 0;
+    bottom: -17px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-right: 6px;
     font-size: 10px;
     line-height: 1;
     color: var(--c-text-4);
@@ -5211,4 +5216,37 @@ select:focus-visible,
     user-select: none;
 }
 
-/* ---------- 22.13 结束 ---------- */
+.chat-time-inline,
+.chat-read-inline {
+    color: var(--c-text-4);
+}
+
+/* 时间格式切换按钮 */
+.time-format-toggle {
+    display: flex;
+    gap: 6px;
+}
+
+.time-format-btn {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--c-text-2);
+    background: var(--c-bg-2);
+    transition: all .14s ease;
+}
+
+.time-format-btn.active {
+    color: #fff;
+    background: var(--c-primary);
+    font-weight: 600;
+}
+
+.time-format-btn:active {
+    transform: scale(0.95);
+}
+
+/* 消息列表：给 meta-row 留足下方空间 */
+.chat-body {
+    padding-bottom: 28px;
+}
