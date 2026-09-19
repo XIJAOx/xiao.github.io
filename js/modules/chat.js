@@ -161,7 +161,10 @@ export function initChat() {
             if (text) appendMessage({ role: 'me', type: 'text', content: text });
         }),
         bus.on('chat:ta-message', (text) => {
-            if (text) appendMessage({ role: 'ta', type: 'text', content: text });
+        if (text) appendMessage({ role: 'ta', type: 'text', content: text });
+        }),
+        bus.on('chat:call-record', (text) => {
+        if (text) appendMessage({ role: 'system', type: 'text', content: text });
         })
     );
 }
