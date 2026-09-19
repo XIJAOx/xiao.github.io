@@ -285,22 +285,27 @@ export function hangUp() {
 
 function endCall(reason) {
     const duration = getCurrentDuration();
+
     cleanup();
     hideAllUI();
 
-    if (reason === 'ended' && duration >= 3) {
-        recordCall(duration);
-        toast(`通话结束 · 时长 ${formatDuration(duration)}`);
-        const line = randomPick(CALL_END_LINES);
-        bus.emit('chat:system-message', line);
+    if (reason === 'ended') {
+        if (duration >= 3) {
+            recordCall(duration);
+            toast(`通话结束 · 时长 ${formatDuration(duration)}`);
+            bus.emit('chat:call-record', `通话时长 ${formatDuration(duration)}`);
+        } else {
+            bus.emit('chat:call-record', '通话已结束');
+        }
     } else if (reason === 'rejected') {
-        const line = randomPick(REJECT_LINES);
-        toast(line);
+        toast('对方拒绝接听');
+        bus.emit('chat:call-record', '对方拒绝接听');
     } else if (reason === 'cancelled') {
-    toast('已取消');
+        toast('已取消');
+        bus.emit('chat:call-record', '已取消通话');
     } else if (reason === 'missed') {
-    toast('对方未接听');
-    bus.emit('chat:system-message', '刚才给你打了个电话，没接通~');
+        toast('对方未接听');
+        bus.emit('chat:call-record', '未接来电');
     }
 
     _state = 'idle';
