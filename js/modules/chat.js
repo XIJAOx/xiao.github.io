@@ -14,6 +14,7 @@ import {
     scrollToBottom,
     uid, randomInt, randomPick, debounce,
     downloadFile, readFileAsText
+    mjConfirm, mjPrompt, mjAlert
 } from '../utils/dom.js';
 
 import { KEYS, get, set, update } from '../utils/storage.js';
