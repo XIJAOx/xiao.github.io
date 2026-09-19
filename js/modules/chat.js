@@ -1641,7 +1641,8 @@ export const chatActions = {
 
     'view-ta-profile': () => openCharacterEditor(getCurrentCharacter()),
 
-    'add-character': () => openAddCharacterDialog()
+    'add-character': () => openAddCharacterDialog(),
+    'manage-characters': () => openCharacterManager()
 };
 
 export const chatNavs = {
