@@ -158,19 +158,25 @@ function renderChatHeader() {
     if (nameEl) nameEl.textContent = profile.ta.name || 'TA';
 
     const circle = byId('chat-header-avatar');
-    if (circle && profile.ta.avatar) {
-        let img = circle.querySelector('img.mj-avatar-img');
-        if (!img) {
-            img = document.createElement('img');
-            img.className = 'mj-avatar-img';
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.objectFit = 'cover';
-            circle.appendChild(img);
-        }
-        img.src = profile.ta.avatar;
+    if (circle) {
+        const oldImg = circle.querySelector('img.mj-avatar-img');
         const svg = circle.querySelector('svg');
-        if (svg) svg.style.display = 'none';
+        if (profile.ta.avatar) {
+            let img = oldImg;
+            if (!img) {
+                img = document.createElement('img');
+                img.className = 'mj-avatar-img';
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                circle.appendChild(img);
+            }
+            img.src = profile.ta.avatar;
+            if (svg) svg.style.display = 'none';
+        } else {
+            if (oldImg) oldImg.remove();
+            if (svg) svg.style.display = '';
+        }
     }
 }
 
@@ -268,7 +274,6 @@ function createMessageEl(msg) {
 
     wrap.appendChild(bubble);
 
-    // 气泡下方右侧：时间戳 + 已读/未读
     if (showTime || showRead) {
         const metaRow = document.createElement('div');
         metaRow.className = 'chat-meta-row';
@@ -854,7 +859,6 @@ function bindTimestampModal() {
 
     const modal = byId('modal-timestamp');
     if (modal) {
-        // 时间格式切换
         modal.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-time-format]');
             if (!btn) return;
@@ -866,7 +870,6 @@ function bindTimestampModal() {
             renderChatMessages();
         });
 
-        // 打开时同步界面状态
         const observer = new MutationObserver(() => {
             if (modal.classList.contains('active')) {
                 const ap = get(KEYS.CHAT_APPEARANCE);
@@ -973,6 +976,109 @@ function bindGroupChatModal() {
             toast('暂无可添加的成员');
         });
     }
+}
+
+
+/* ==========================================================================
+   TA 资料编辑
+   ========================================================================== */
+
+function openTaProfileEditor() {
+    const profile = get(KEYS.PROFILE);
+    let tempAvatar = profile.ta.avatar || '';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay active';
+    overlay.id = 'modal-ta-profile';
+    overlay.innerHTML = `
+        <div class="modal" style="max-width: 340px;">
+            <div class="modal-header">
+                <h2 class="modal-title">TA 的资料</h2>
+                <button class="modal-close" data-role="close" aria-label="关闭">✕</button>
+            </div>
+
+            <div class="ta-profile-row">
+                <div class="ta-profile-avatar" id="ta-profile-avatar"></div>
+                <input type="text" class="form-input ta-profile-name"
+                    id="ta-profile-name"
+                    placeholder="输入昵称"
+                    value="${escapeHtml(profile.ta.name || 'TA')}"
+                    maxlength="20"
+                    aria-label="TA 昵称">
+            </div>
+
+            <button class="upload-btn" id="btn-upload-ta-avatar" type="button">📁 上传头像</button>
+
+            <div class="modal-actions">
+                <button class="modal-btn secondary" data-role="close">取消</button>
+                <button class="modal-btn primary" data-role="save">保存</button>
+            </div>
+        </div>
+    `;
+
+    const avatarEl = overlay.querySelector('#ta-profile-avatar');
+    const renderAvatar = () => {
+        if (tempAvatar) {
+            avatarEl.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = tempAvatar;
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            avatarEl.appendChild(img);
+        } else {
+            avatarEl.innerHTML = `
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+            `;
+        }
+    };
+    renderAvatar();
+
+    overlay.querySelector('#btn-upload-ta-avatar').addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = () => {
+            const file = input.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                tempAvatar = reader.result;
+                renderAvatar();
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
+    });
+
+    const close = () => overlay.remove();
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || e.target.closest('[data-role="close"]')) close();
+    });
+
+    overlay.querySelector('[data-role="save"]').addEventListener('click', () => {
+        const nameInput = overlay.querySelector('#ta-profile-name');
+        const newName = (nameInput.value || '').trim() || 'TA';
+
+        const data = get(KEYS.PROFILE);
+        data.ta.name = newName;
+        data.ta.avatar = tempAvatar;
+        set(KEYS.PROFILE, data);
+
+        bus.emit('profile:update');
+
+        renderChatHeader();
+        renderChatListPreview();
+
+        close();
+        toast('资料已更新');
+    });
+
+    document.body.appendChild(overlay);
+
+    setTimeout(() => {
+        overlay.querySelector('#ta-profile-name')?.focus();
+    }, 120);
 }
 
 
@@ -1158,7 +1264,8 @@ export const chatActions = {
         toast(`找到 ${list.length} 条包含"${kw}"的消息`);
     },
 
-        'view-ta-profile': () => openTaProfileEditor()
+    'view-ta-profile': () => openTaProfileEditor()
+};
 
 export const chatNavs = {
     'chat-list': () => showScreen('screen-chat-list'),
@@ -1173,112 +1280,6 @@ export const chatNavs = {
 /* ==========================================================================
    辅助
    ========================================================================== */
-/* ---------- TA 资料编辑 ---------- */
-
-function openTaProfileEditor() {
-    const profile = get(KEYS.PROFILE);
-    let tempAvatar = profile.ta.avatar || '';
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay active';
-    overlay.id = 'modal-ta-profile';
-    overlay.innerHTML = `
-        <div class="modal" style="max-width: 340px;">
-            <div class="modal-header">
-                <h2 class="modal-title">TA 的资料</h2>
-                <button class="modal-close" data-role="close" aria-label="关闭">✕</button>
-            </div>
-
-            <div class="ta-profile-row">
-                <div class="ta-profile-avatar" id="ta-profile-avatar"></div>
-                <input type="text" class="form-input ta-profile-name"
-                    id="ta-profile-name"
-                    placeholder="输入昵称"
-                    value="${escapeHtml(profile.ta.name || 'TA')}"
-                    maxlength="20"
-                    aria-label="TA 昵称">
-            </div>
-
-            <button class="upload-btn" id="btn-upload-ta-avatar" type="button">📁 上传头像</button>
-
-            <div class="modal-actions">
-                <button class="modal-btn secondary" data-role="close">取消</button>
-                <button class="modal-btn primary" data-role="save">保存</button>
-            </div>
-        </div>
-    `;
-
-    // 渲染头像预览
-    const avatarEl = overlay.querySelector('#ta-profile-avatar');
-    const renderAvatar = () => {
-        if (tempAvatar) {
-            avatarEl.innerHTML = '';
-            const img = document.createElement('img');
-            img.src = tempAvatar;
-            img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-            avatarEl.appendChild(img);
-        } else {
-            avatarEl.innerHTML = `
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
-            `;
-        }
-    };
-    renderAvatar();
-
-    // 上传头像
-    overlay.querySelector('#btn-upload-ta-avatar').addEventListener('click', () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = () => {
-            const file = input.files?.[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-                tempAvatar = reader.result;
-                renderAvatar();
-            };
-            reader.readAsDataURL(file);
-        };
-        input.click();
-    });
-
-    // 关闭
-    const close = () => overlay.remove();
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay || e.target.closest('[data-role="close"]')) close();
-    });
-
-    // 保存
-    overlay.querySelector('[data-role="save"]').addEventListener('click', () => {
-        const nameInput = overlay.querySelector('#ta-profile-name');
-        const newName = (nameInput.value || '').trim() || 'TA';
-
-        const data = get(KEYS.PROFILE);
-        data.ta.name = newName;
-        data.ta.avatar = tempAvatar;
-        set(KEYS.PROFILE, data);
-
-        // 广播，让其他模块刷新
-        bus.emit('profile:update');
-
-        // 立即刷新本地展示
-        renderChatHeader();
-        renderChatListPreview();
-
-        close();
-        toast('资料已更新');
-    });
-
-    document.body.appendChild(overlay);
-
-    setTimeout(() => {
-        overlay.querySelector('#ta-profile-name')?.focus();
-    }, 120);
-}
-
 
 function pickAndSendImage() {
     const input = document.createElement('input');
