@@ -554,7 +554,7 @@ export function appendMessage(msg) {
         type: msg.type || 'text',
         content: msg.content || '',
         ts: msg.ts || Date.now(),
-        read: msg.read !== undefined ? msg.read : (role === 'ta'),
+        read: msg.read !== undefined ? msg.read : (role === 'ta' || role === 'system'),
         ...msg
     };
 
