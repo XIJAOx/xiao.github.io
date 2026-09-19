@@ -452,9 +452,20 @@ function createMessageEl(msg) {
     const showRead = !!appearance.timestamp?.showRead && msg.role === 'me';
     const timeFormat = appearance.timestamp?.format || 'hm';
 
-    const row = document.createElement('div');
-    row.className = `chat-row ${msg.role === 'me' ? 'me' : 'ta'}`;
+        const row = document.createElement('div');
+    row.className = `chat-row ${
+        msg.role === 'me' ? 'me' : msg.role === 'ta' ? 'ta' : 'system'
+    }`;
     row.dataset.msgId = msg.id;
+
+    // 系统消息：居中灰色胶囊（不带头像、不带 meta）
+    if (msg.role === 'system') {
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble system';
+        bubble.textContent = msg.content || '';
+        row.appendChild(bubble);
+        return row;
+    }
 
     const avatar = document.createElement('div');
     avatar.className = 'chat-row-avatar';
