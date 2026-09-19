@@ -36,10 +36,10 @@
 
 :root {
     /* ---- 主色 ---- */
-    --c-primary: #ff6b8a;
-    --c-primary-dark: #e8556f;
-    --c-primary-light: #ffd3dc;
-    --c-primary-soft: #fff0f3;
+    --c-primary: #4dabf7;
+    --c-primary-dark: #339af0;
+    --c-primary-light: #d0ebff;
+    --c-primary-soft: #e7f5ff;
 
     /* ---- 辅助色 ---- */
     --c-secondary: #7c8cff;
