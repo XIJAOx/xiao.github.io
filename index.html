@@ -1380,6 +1380,13 @@ window.addEventListener('unhandledrejection', function(e) {
                     <span class="check-row-label" id="timestamp-label-read">显示已读</span>
                     <button class="check-indicator" id="check-read-receipt" data-action="toggle-check" data-check-id="read-receipt" aria-label="显示已读"></button>
                 </div>
+                <div class="check-row" id="timestamp-row-format">
+                   <span class="check-row-label" id="timestamp-label-format">时间格式</span>
+                   <div class="time-format-toggle">
+                   <button class="time-format-btn active" data-time-format="hm">时:分</button>
+                   <button class="time-format-btn" data-time-format="hms">时:分:秒</button>
+                </div>
+                </div>
 
                 <button class="modal-btn primary" id="btn-done-timestamp" data-action="close-modal" aria-label="完成时间戳设置">完成</button>
             </div>
