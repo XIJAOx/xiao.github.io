@@ -175,6 +175,20 @@ function renderChatHeader() {
 
 
 /* ==========================================================================
+   时间格式化（气泡下方）
+   ========================================================================== */
+
+function formatTimeInline(ts, format) {
+    const d = ts instanceof Date ? ts : new Date(ts);
+    const pad = (n) => String(n).padStart(2, '0');
+    const hh = pad(d.getHours());
+    const mm = pad(d.getMinutes());
+    const ss = pad(d.getSeconds());
+    return format === 'hms' ? `${hh}:${mm}:${ss}` : `${hh}:${mm}`;
+}
+
+
+/* ==========================================================================
    渲染：消息
    ========================================================================== */
 
@@ -298,22 +312,6 @@ function createAvatarContent(src) {
     return svg;
 }
 
-function formatTimeInline(ts, format) {
-    const d = ts instanceof Date ? ts : new Date(ts);
-    const pad = (n) => String(n).padStart(2, '0');
-    const hh = pad(d.getHours());
-    const mm = pad(d.getMinutes());
-    const ss = pad(d.getSeconds());
-    return format === 'hms' ? `${hh}:${mm}:${ss}` : `${hh}:${mm}`;
-}
-
-function createTimestampEl(ts) {
-    const el = document.createElement('div');
-    el.className = 'chat-timestamp';
-    el.textContent = formatChatTime(ts);
-    return el;
-}
-
 function scrollChatToBottom(smooth = false) {
     const container = byId('chat-message-list');
     if (!container) return;
@@ -350,10 +348,6 @@ export function appendMessage(msg) {
         scrollChatToBottom(true);
     }
 
-    renderChatListPreview();
-    bus.emit('chat:new-message', full);
-    return full;
-}
     renderChatListPreview();
     bus.emit('chat:new-message', full);
     return full;
@@ -838,10 +832,9 @@ function bindAvatarModal() {
 }
 
 
-/* ---------- 时间戳 ---------- */
+/* ---------- 时间戳 / 已读 ---------- */
 
 function bindTimestampModal() {
-    // 监听勾选变化（显示时间戳 / 显示已读）
     bus.on('check:change', ({ id, value }) => {
         if (id === 'timestamp') {
             update(KEYS.CHAT_APPEARANCE, {
@@ -858,9 +851,9 @@ function bindTimestampModal() {
         }
     });
 
-    // 时间格式：时:分 / 时:分:秒
     const modal = byId('modal-timestamp');
     if (modal) {
+        // 时间格式切换
         modal.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-time-format]');
             if (!btn) return;
@@ -872,7 +865,7 @@ function bindTimestampModal() {
             renderChatMessages();
         });
 
-        // 打开弹窗时同步界面状态
+        // 打开时同步界面状态
         const observer = new MutationObserver(() => {
             if (modal.classList.contains('active')) {
                 const ap = get(KEYS.CHAT_APPEARANCE);
