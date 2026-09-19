@@ -158,6 +158,31 @@ export function renderChatListPreview() {
 /* ==========================================================================
    渲染：聊天头
    ========================================================================== */
+/**
+ * 把头像图片应用到容器里（没图就用原有 svg）
+ */
+function applyAvatarTo(wrap, src) {
+    if (!wrap) return;
+    const oldImg = wrap.querySelector('img.mj-avatar-img');
+    const svg = wrap.querySelector('svg');
+
+    if (src) {
+        let img = oldImg;
+        if (!img) {
+            img = document.createElement('img');
+            img.className = 'mj-avatar-img';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            wrap.appendChild(img);
+        }
+        img.src = src;
+        if (svg) svg.style.display = 'none';
+    } else {
+        if (oldImg) oldImg.remove();
+        if (svg) svg.style.display = '';
+    }
+}
 
 function renderChatHeader() {
     const profile = get(KEYS.PROFILE);
