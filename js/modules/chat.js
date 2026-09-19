@@ -1158,14 +1158,7 @@ export const chatActions = {
         toast(`找到 ${list.length} 条包含"${kw}"的消息`);
     },
 
-    'view-ta-profile': () => {
-        const profile = get(KEYS.PROFILE);
-        mjAlert(
-            `名字：${profile.ta.name || 'TA'}\n头像：${profile.ta.avatar ? '已设置' : '默认'}`,
-            { title: 'TA 的资料' }
-        );
-    }
-};
+        'view-ta-profile': () => openTaProfileEditor()
 
 export const chatNavs = {
     'chat-list': () => showScreen('screen-chat-list'),
