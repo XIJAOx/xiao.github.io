@@ -5250,3 +5250,38 @@ select:focus-visible,
 .chat-body {
     padding-bottom: 28px;
 }
+/* ==========================================================================
+   TA 资料编辑弹窗
+   ========================================================================== */
+
+.ta-profile-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.ta-profile-avatar {
+    flex: 0 0 auto;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--c-primary-light);
+    color: var(--c-primary-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ta-profile-avatar svg {
+    width: 60%;
+    height: 60%;
+    fill: currentColor;
+}
+
+.ta-profile-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 44px;
+}
