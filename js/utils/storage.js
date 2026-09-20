@@ -340,6 +340,24 @@ export const DEFAULTS = {
         me: { name: '我', avatar: '' }
     }),
 
+[KEYS.SHOP]: () => ({
+    balance: 520,
+    products: [
+        // 推荐
+        { id: 'p1', name: '纯棉白衬衫', price: 129, category: 'recommend', tags: ['衣物', '新品'], emoji: '👔', desc: '100%新疆长绒棉，亲肤透气，商务休闲两相宜' },
+        { id: 'p2', name: '连帽卫衣',   price: 169, category: 'recommend', tags: ['衣物', '热销'], emoji: '🧥', desc: '加绒加厚，宽松版型，秋冬必备。情侣款可配对穿' },
+        { id: 'p3', name: '真丝睡裙',   price: 259, category: 'recommend', tags: ['衣物', '性感'], emoji: '👗', desc: '100%桑蚕丝，亲肤丝滑，蕾丝拼接设计' },
+        { id: 'p4', name: '情侣拖鞋',   price: 49,  category: 'recommend', tags: ['衣物', '情侣'], emoji: '🩴', desc: 'EVA材质，防滑耐磨，可定制刺绣' },
+        // 外卖
+        { id: 'p5', name: '芋泥波波奶茶', price: 18, category: 'takeout', tags: ['奶茶', '人气'], emoji: '🧋', desc: '手工芋泥+黑糖珍珠，大杯700ml' },
+        { id: 'p6', name: '杨枝甘露',     price: 22, category: 'takeout', tags: ['奶茶', '新品'], emoji: '🥭', desc: '新鲜芒果+西柚+椰浆，清爽解腻' },
+        { id: 'p7', name: '生椰拿铁',     price: 20, category: 'takeout', tags: ['奶茶', '热销'], emoji: '☕', desc: '现萃咖啡+厚椰乳，丝滑香浓' },
+        { id: 'p8', name: '百香果柠檬茶', price: 16, category: 'takeout', tags: ['奶茶', '清爽'], emoji: '🍋', desc: '新鲜百香果+手捣柠檬，酸甜开胃' }
+    ],
+    cart: [],
+    orders: []
+}),
+   
     /* ---- 喝水 ---- */
     [KEYS.WATER]: () => ({
         goal: 8,                // 目标杯数
