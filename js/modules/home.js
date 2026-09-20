@@ -84,6 +84,12 @@ export function initHome() {
 
     _unsubs.push(
         bus.on('music:state', onMusicState),
+        bus.on('screen:change', ({ id }) => {
+    if (id === 'screen-home') {
+        renderConnection();
+        updateClock();
+    }
+}),
         bus.on('period:update', onPeriodUpdate),
         bus.on('profile:update', renderProfile),
         bus.on('chat:new-message', refreshDateBoundData)
