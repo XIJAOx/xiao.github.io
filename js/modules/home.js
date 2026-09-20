@@ -77,6 +77,9 @@ export function initHome() {
     bindPager();
     bindCheckin();
     bindMusicPlayer();
+    bindAvatarAndName();
+    startClock();
+    renderConnection();
 
     _unsubs.push(
         bus.on('music:state', onMusicState),
