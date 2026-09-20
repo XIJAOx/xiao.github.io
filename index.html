@@ -1180,12 +1180,38 @@ window.addEventListener('unhandledrejection', function(e) {
                 </div>
 
                 <div class="word-card-icons" id="word-card-icons">
-                    <button class="word-card-icon-btn" id="btn-word-card-search" data-action="word-card-search" aria-label="搜索字卡">🔍</button>
-                    <button class="word-card-icon-btn" id="btn-word-card-folder" data-action="word-card-folder" aria-label="字卡文件夹">📁</button>
-                    <button class="word-card-icon-btn" id="btn-word-card-select" data-action="word-card-select" aria-label="选择字卡">⬛</button>
-                    <button class="word-card-icon-btn" id="btn-word-card-import" data-action="word-card-import" aria-label="导入字卡">⬇️</button>
-                    <button class="word-card-icon-btn" id="btn-word-card-export" data-action="word-card-export" aria-label="导出字卡">⬆️</button>
-                </div>
+    <button class="word-card-icon-btn" id="btn-word-card-search" data-action="word-card-search" aria-label="搜索字卡">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+    </button>
+    <button class="word-card-icon-btn" id="btn-word-card-folder" data-action="word-card-folder" aria-label="字卡文件夹">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+    </button>
+    <button class="word-card-icon-btn" id="btn-word-card-select" data-action="word-card-select" aria-label="选择字卡">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 11 12 14 22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+    </button>
+    <button class="word-card-icon-btn" id="btn-word-card-import" data-action="word-card-import" aria-label="导入字卡">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+    </button>
+    <button class="word-card-icon-btn" id="btn-word-card-export" data-action="word-card-export" aria-label="导出字卡">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+    </button>
+</div>
 
                 <div class="word-card-list" id="word-card-list" role="tabpanel">
                     <div class="word-card-empty" id="word-card-empty">
