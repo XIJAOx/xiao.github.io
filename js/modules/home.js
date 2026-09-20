@@ -11,10 +11,10 @@ import {
     setVisible, setText, setPlaceholder,
     formatDate, formatDuration, formatYearMonth,
     scrollToBottom,
-        randomPick, randomInt, uid,
-    escapeHtml
+    randomPick, randomInt, uid,
+    escapeHtml,
+    mjConfirm, mjPrompt
 } from '../utils/dom.js';
-
 import {
     KEYS, get, set, update, ensure, has
 } from '../utils/storage.js';
