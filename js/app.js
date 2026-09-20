@@ -51,6 +51,7 @@ import favoritesModule,   { initFavorites,        favoritesActions, favoritesNav
 import musicModule,       { initMusic,            musicActions, musicNavs } from './modules/music.js';
 import questionsModule,   { initQuestions,        questionsActions, questionsNavs } from './modules/questions.js';
 import waterModule,       { initWater,            waterActions, waterNavs } from './modules/water.js';
+import shopModule, { initShop, shopActions, shopNavs } from './modules/shop.js';
 import settingsModule,    { initSettings,         applyTheme, settingsActions } from './modules/settings.js';
 import callModule,        { initCall,             callActions }         from './modules/call.js';
 
