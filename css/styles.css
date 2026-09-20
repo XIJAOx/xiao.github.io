@@ -5803,55 +5803,74 @@ select:focus-visible,
     background: #4dabf7;
 }
 
+/* 商品列表：两列网格 */
 .shop-products {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 8px;
 }
 
 .shop-product {
     background: var(--c-surface);
-    border-radius: 14px;
-    padding: 10px;
+    border-radius: 12px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     box-shadow: var(--sh-xs);
+    position: relative;
+    transition: transform .14s ease;
+}
+
+.shop-product:active {
+    transform: scale(0.98);
 }
 
 .shop-product-img {
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 5 / 4;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
+    border-radius: 8px;
     background: linear-gradient(135deg, #f7f7fa, #eef1f7);
-    font-size: 48px;
+    font-size: 32px;
     line-height: 1;
+    overflow: hidden;
+}
+
+.shop-product-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .shop-product-name {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--c-text-1);
+    line-height: 1.3;
 }
 
 .shop-product-desc {
-    font-size: 11px;
-    line-height: 1.5;
+    font-size: 10px;
+    line-height: 1.4;
     color: var(--c-text-3);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .shop-product-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 3px;
 }
 
 .shop-tag {
-    padding: 1px 7px;
+    padding: 1px 6px;
     border-radius: 4px;
-    font-size: 10px;
+    font-size: 9px;
     color: #d94f72;
     background: #ffeef3;
 }
@@ -5861,27 +5880,33 @@ select:focus-visible,
     align-items: center;
     justify-content: space-between;
     margin-top: auto;
-    padding-top: 4px;
+    padding-top: 3px;
 }
 
 .shop-product-price {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     color: #4dabf7;
 }
 
 .shop-product-add {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: #4dabf7;
     color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1;
+    transition: transform .14s ease;
 }
 
+.shop-product-add:active {
+    transform: scale(0.85);
+}
 .shop-cart-list {
     flex: 1;
     overflow-y: auto;
