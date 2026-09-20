@@ -183,7 +183,7 @@ const RAW_NAVS = {
     ...questionsNavs,
 
     /* ---------- 喝水 ---------- */
-    ...waterNavs，
+    ...waterNavs,
 
     /* ---------- 商城 ---------- */
     ...shopNavs
