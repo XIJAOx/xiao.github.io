@@ -1,6 +1,6 @@
 /* ==========================================================================
    梦角 · Dream Corner
-   主样式表  main.css
+   主样式表  styles.css
    --------------------------------------------------------------------------
    目录
    00. 设计变量 / Design Tokens
@@ -6352,4 +6352,81 @@ select:focus-visible,
     height: 18px;
     display: block;
     color: #4dabf7;
+}
+
+/* ==========================================================================
+   纪念日弹窗
+   ========================================================================== */
+
+.modal-anniversary {
+    max-width: 380px;
+}
+
+.anniversary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.anniversary-card {
+    padding: 18px 20px;
+    border-radius: 18px;
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    box-shadow: var(--sh-xs);
+    cursor: pointer;
+    transition: transform .14s ease, box-shadow .14s ease;
+}
+
+.anniversary-card:active {
+    transform: scale(0.98);
+    box-shadow: var(--sh-sm);
+}
+
+.anniversary-card-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--c-text-1);
+    margin-bottom: 8px;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.anniversary-card-days {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.anniversary-card-num {
+    font-size: 52px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--c-text);
+    letter-spacing: -2px;
+    font-variant-numeric: tabular-nums;
+}
+
+.anniversary-card-unit {
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--c-text-1);
+}
+
+.anniversary-add {
+    width: 100%;
+    height: 48px;
+    border-radius: 16px;
+    border: 1px solid var(--c-line-2);
+    font-size: 16px;
+    color: var(--c-text-1);
+    background: var(--c-surface);
+    transition: all .14s ease;
+}
+
+.anniversary-add:active {
+    background: var(--c-bg-2);
 }
