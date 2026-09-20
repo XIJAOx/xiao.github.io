@@ -6150,3 +6150,142 @@ select:focus-visible,
 .grid-item-shop .grid-icon {
     color: #4dabf7 !important;
 }
+
+/* ==========================================================================
+   商品详情弹窗
+   ========================================================================== */
+
+.product-dialog {
+    position: relative;
+    max-width: 340px !important;
+    padding: 20px !important;
+    border-radius: 24px !important;
+    overflow: visible !important;
+}
+
+.product-dialog-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--c-text-2);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    transition: background .14s ease;
+}
+
+.product-dialog-close:active {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.product-dialog-hero {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 96px;
+    line-height: 1;
+    overflow: hidden;
+    margin-bottom: 16px;
+    user-select: none;
+}
+
+.product-dialog-hero img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-dialog-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--c-text-1);
+    text-align: center;
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+
+.product-dialog-price {
+    font-size: 16px;
+    font-weight: 700;
+    color: #4dabf7;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.product-dialog-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-text-1);
+    margin-bottom: 8px;
+}
+
+.product-dialog-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--c-line-2);
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+    background: var(--c-surface-2);
+    resize: none;
+    margin-bottom: 16px;
+    font-family: inherit;
+}
+
+.product-dialog-input:focus {
+    border-color: #4dabf7;
+    box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.15);
+}
+
+.product-dialog-actions {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.product-dialog-btn {
+    flex: 1;
+    height: 42px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: transform .14s ease, background .14s ease;
+    white-space: nowrap;
+    padding: 0 6px;
+}
+
+.product-dialog-btn:active {
+    transform: scale(0.96);
+}
+
+.product-dialog-btn.secondary {
+    color: var(--c-text-2);
+    background: var(--c-bg-2);
+}
+
+.product-dialog-btn.ghost {
+    color: var(--c-text-1);
+    background: var(--c-bg-2);
+}
+
+.product-dialog-btn.primary {
+    color: #fff;
+    background: #1a1a1a;
+}
+
+.product-dialog-note {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--c-text-3);
+    text-align: center;
+    padding: 0 4px;
+}
