@@ -6314,3 +6314,42 @@ select:focus-visible,
     text-align: center;
     padding: 0 4px;
 }
+
+/* ==========================================================================
+   所有 SVG 图标统一颜色 & 尺寸
+   ========================================================================== */
+
+/* 聊天列表头部图标 */
+#btn-chat-list-search svg,
+#btn-chat-list-add svg {
+    width: 20px;
+    height: 20px;
+    color: #4dabf7;
+    display: block;
+}
+
+/* 聊天页头部通话按钮 */
+#btn-chat-call svg {
+    width: 20px;
+    height: 20px;
+    color: #4dabf7;
+}
+
+/* 聊天页底部表情按钮 */
+#btn-chat-emoji svg {
+    width: 22px;
+    height: 22px;
+    color: #4dabf7;
+}
+
+/* 字卡库 5 个图标 */
+.word-card-icon-btn {
+    color: #4dabf7;
+}
+
+.word-card-icon-btn svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+    color: #4dabf7;
+}
