@@ -191,47 +191,12 @@ function openProductDialog(productId) {
     });
 
     // 送给梦角
-    overlay.querySelector('[data-role="gift"]').addEventListener('click', async () => {
-        const msg = overlay.querySelector('#product-dialog-msg').value.trim();
-        const d = ensureShopData();
-
-        if (p.price > d.balance) {
-            toast(`余额不足，还差 ¥${(p.price - d.balance).toFixed(2)}`);
-            return;
-        }
-
-        const ok = await mjConfirm(
-            `花 ¥${p.price} 买下「${p.name}」送给 TA？` + (msg ? `\n留言：${msg}` : ''),
-            { title: '送给梦角' }
-        );
-        if (!ok) return;
-
-        d.balance -= p.price;
-        const order = {
-            id: uid('order'),
-            items: [{
-                productId: p.id,
-                name: p.name,
-                emoji: p.emoji,
-                price: p.price,
-                qty: 1
-            }],
-            total: p.price,
-            status: 'pending',
-            message: msg,
-            ts: Date.now()
-        };
-        d.orders.push(order);
-        saveShopData(d);
-
-        close();
-        renderAll();
-        toast('已送出 🎁');
-        switchView('orders');
-
-        // 让 TA 在聊天里回应
-        bus.emit('chat:ta-message', `谢谢你送我「${p.name}」！${msg ? '（' + msg + '）' : ''}好开心呀 ♥`);
-    });
+    // 送给梦角
+overlay.querySelector('[data-role="gift"]').addEventListener('click', () => {
+    const msg = overlay.querySelector('#product-dialog-msg').value.trim();
+    close();
+    openCharacterPicker(p, msg);
+});
 
     document.body.appendChild(overlay);
 }
