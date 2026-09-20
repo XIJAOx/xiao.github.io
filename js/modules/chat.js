@@ -1661,6 +1661,80 @@ export const chatNavs = {
    辅助
    ========================================================================== */
 
+/* ---------- 表情面板 ---------- */
+
+const EMOJI_GROUPS = [
+    {
+        name: '表情',
+        list: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','😋','😛','😜','🤪','😝','🤗','🤔','🤨','😐','😑','😶','🙄','😏','😣','😥','😮','🤐','😯','😪','😫','😴','😌','😛','😒','😓','😔','😕','🙁','😖','😞','😟','😤','😢','😭','😦','😧','😨','😩','🤯','😬','😰','😱','🥵','🥶','😳','🤪','😵','🥴','😠','😡','🤬','😷','🤒','🤕','🤢','🤮','🤧','😇','🥳','🥺','🤠','🤡','🤥','🤫','🤭','🧐','🤓']
+    },
+    {
+        name: '手势',
+        list: ['👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🤚','🖐','🖖','👋','🤝','🙏','💪','👏','🙌','👐','🤲','✊','👊','🤛','🤜','💅','🤳']
+    },
+    {
+        name: '心情',
+        list: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','♥️','💋','💌','💐','🌹','🌷','🌸','🌺','🌻','🌼']
+    },
+    {
+        name: '其他',
+        list: ['🎉','🎊','✨','⭐','🌟','💫','🔥','💯','🎁','🎈','🎀','🍰','🎂','🍭','🍬','🍫','🧁','🍩','🍪','☕','🍵','🍺','🍻','🥂','🌙','☀️','⛅','🌈','☔','❄️','💤','💢','💥','💦','💨']
+    }
+];
+
+function openEmojiPanel() {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay active';
+    overlay.id = 'emoji-panel-overlay';
+    overlay.innerHTML = `
+        <div class="emoji-panel">
+            <div class="emoji-panel-header">
+                <span class="emoji-panel-title">表情</span>
+                <button class="emoji-panel-close" data-role="close" aria-label="关闭">✕</button>
+            </div>
+            <div class="emoji-panel-body" id="emoji-panel-body"></div>
+        </div>
+    `;
+
+    const body = overlay.querySelector('#emoji-panel-body');
+
+    EMOJI_GROUPS.forEach((group) => {
+        const title = document.createElement('div');
+        title.className = 'emoji-group-title';
+        title.textContent = group.name;
+        body.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'emoji-grid';
+
+        group.list.forEach((emoji) => {
+            const btn = document.createElement('button');
+            btn.className = 'emoji-btn';
+            btn.textContent = emoji;
+            btn.addEventListener('click', () => {
+                sendEmoji(emoji);
+                overlay.remove();
+            });
+            grid.appendChild(btn);
+        });
+
+        body.appendChild(grid);
+    });
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || e.target.closest('[data-role="close"]')) {
+            overlay.remove();
+        }
+    });
+
+    document.body.appendChild(overlay);
+}
+
+function sendEmoji(emoji) {
+    appendMessage({ role: 'me', type: 'text', content: emoji });
+    scheduleAutoReply();
+}
+
 function pickAndSendImage() {
     const input = document.createElement('input');
     input.type = 'file';
