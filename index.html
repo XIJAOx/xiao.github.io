@@ -438,19 +438,15 @@ window.addEventListener('unhandledrejection', function(e) {
         <!-- ==================== 纪念日弹窗 ============================== -->
         <!-- ============================================================ -->
         <div class="modal-overlay" id="modal-anniversary" data-modal-id="anniversary" data-modal-type="anniversary" role="dialog" aria-modal="true" aria-labelledby="modal-anniversary-title">
-            <div class="modal modal-anniversary" id="modal-anniversary-content">
-                <div class="modal-header" id="modal-anniversary-header">
-                    <h2 class="modal-title" id="modal-anniversary-title">纪念日</h2>
-                </div>
-                <div class="anniversary-body" id="anniversary-body">
-                    <div class="anniversary-empty" id="anniversary-empty">还没有纪念日</div>
-                    <button class="anniversary-add" id="btn-add-anniversary" data-action="add-anniversary" aria-label="添加纪念日">+ 添加纪念日</button>
-                </div>
-                <div class="anniversary-list" id="anniversary-list" hidden>
-                    <!-- 纪念日列表由 JS 动态渲染 -->
-                </div>
-                <button class="modal-btn primary" id="btn-close-anniversary" data-action="close-modal" aria-label="关闭纪念日弹窗">关闭</button>
-            </div>
+        <div class="modal-overlay" id="modal-anniversary" data-modal-id="anniversary" data-modal-type="anniversary" role="dialog" aria-modal="true" aria-labelledby="modal-anniversary-title">
+    <div class="modal modal-anniversary" id="modal-anniversary-content">
+        <div class="modal-header" id="modal-anniversary-header">
+            <h2 class="modal-title" id="modal-anniversary-title">纪念日</h2>
+            <button class="modal-close" data-action="close-modal" aria-label="关闭">✕</button>
+        </div>
+        <div class="anniversary-list" id="anniversary-list"></div>
+        <button class="anniversary-add" id="btn-add-anniversary" data-action="add-anniversary" aria-label="添加纪念日">+ 添加纪念日</button>
+    </div>
         </div>
 
         <!-- ============================================================ -->
