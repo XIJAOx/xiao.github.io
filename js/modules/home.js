@@ -21,12 +21,6 @@ import {
 
 import { bus, on } from '../utils/event.js';
 
-import {
-    randomPick, randomInt, uid,
-    escapeHtml,
-    mjConfirm, mjPrompt
-} from '../utils/dom.js';
-
 const LOVE_QUOTES = [
     '你是我藏在心里的欢喜',
     '今天也很想你呀',
