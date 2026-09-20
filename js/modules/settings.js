@@ -533,11 +533,105 @@ async function onWordCardSearch() {
 }
 
 function onWordCardFolder() {
-    toast('文件夹功能开发中');
+    const data = get(KEYS.WORD_CARD);
+    const list = data[_currentWordCardTab] || [];
+
+    if (_wordCardSelectMode && _selectedWordCardIds.size > 0) {
+        const name = window.prompt('把这些字卡归入哪个分组？（输入新名字即创建）', '');
+        if (name === null) return;
+        const trimmed = name.trim();
+        if (!trimmed) return;
+
+        let count = 0;
+        list.forEach((it) => {
+            if (_selectedWordCardIds.has(it.id)) {
+                it.folder = trimmed;
+                count++;
+            }
+        });
+        set(KEYS.WORD_CARD, data);
+
+        _selectedWordCardIds.clear();
+        _wordCardSelectMode = false;
+        updateWordCardButtons();
+        renderWordCardList();
+        toast(`已将 ${count} 张字卡归入「${trimmed}」`);
+        return;
+    }
+
+    const folders = {};
+    list.forEach((it) => {
+        const f = it.folder || '';
+        if (f) folders[f] = (folders[f] || 0) + 1;
+    });
+    const folderNames = Object.keys(folders);
+
+    const lines = ['0. 全部'];
+    folderNames.forEach((name, i) => {
+        lines.push(`${i + 1}. ${name}（${folders[name]} 张）`);
+    });
+    lines.push('');
+    lines.push(`当前：${_currentWordCardFolder || '全部'}`);
+    lines.push('');
+    lines.push('输入序号筛选。');
+    lines.push('提示：进入"多选"选中字卡后再点这里，可把它们归入分组。');
+
+    const ans = window.prompt(lines.join('\n'), '0');
+    if (ans === null) return;
+    const trimmed = ans.trim();
+    if (!trimmed) return;
+
+    const n = parseInt(trimmed, 10);
+    if (isNaN(n)) return;
+
+    if (n === 0) {
+        _currentWordCardFolder = null;
+    } else if (n >= 1 && n <= folderNames.length) {
+        _currentWordCardFolder = folderNames[n - 1];
+    } else {
+        return;
+    }
+
+    renderWordCardList();
+    toast(_currentWordCardFolder ? `筛选：${_currentWordCardFolder}` : '显示全部');
 }
 
 function onWordCardSelect() {
-    toast('批量选择功能开发中');
+    if (_wordCardSelectMode) {
+        if (_selectedWordCardIds.size === 0) {
+            _wordCardSelectMode = false;
+            updateWordCardButtons();
+            renderWordCardList();
+            return;
+        }
+        if (!window.confirm(`确定删除选中的 ${_selectedWordCardIds.size} 张字卡吗？`)) return;
+
+        const data = get(KEYS.WORD_CARD);
+        const list = data[_currentWordCardTab] || [];
+        data[_currentWordCardTab] = list.filter((x) => !_selectedWordCardIds.has(x.id));
+        set(KEYS.WORD_CARD, data);
+
+        _selectedWordCardIds.clear();
+        _wordCardSelectMode = false;
+        updateWordCardButtons();
+        renderWordCardList();
+        toast('已删除');
+    } else {
+        _wordCardSelectMode = true;
+        _selectedWordCardIds.clear();
+        updateWordCardButtons();
+        renderWordCardList();
+        toast('已进入多选模式，点击字卡选中，再点一下方块删除');
+    }
+}
+
+function updateWordCardButtons() {
+    const selectBtn = byId('btn-word-card-select');
+    if (selectBtn) {
+        selectBtn.textContent = _wordCardSelectMode
+            ? (_selectedWordCardIds.size > 0 ? `🗑${_selectedWordCardIds.size}` : '⬜')
+            : '⬛';
+    }
 }
 
 function onWordCardImport() {
