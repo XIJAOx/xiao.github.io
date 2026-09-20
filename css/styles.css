@@ -5564,7 +5564,7 @@ select:focus-visible,
 }
 
 .avatar-time {
-    font-size: 30px;
+    font-size: 50px;
     font-weight: 700;
     color: #4dabf7;
     font-variant-numeric: tabular-nums;
@@ -5587,7 +5587,7 @@ select:focus-visible,
     position: absolute;
     right: -4px;
     bottom: -12px;
-    font-size: 54px;      /* ← 从 74 缩到 54 */
+    font-size: 50px;      /* ← 从 74 缩到 54 */
     color: rgba(255, 107, 138, 0.1);
     pointer-events: none;
 }
@@ -5601,9 +5601,9 @@ select:focus-visible,
 
 .connection-hearts {
     display: flex;
-    gap: 4px;             /* ← 从 6 缩到 4 */
+    gap: 2px;             /* ← 从 6 缩到 4 */
     margin-top: 6px;      /* ← 从 10 缩到 6 */
-    font-size: 20px;      /* ← 从 26 缩到 20 */
+    font-size: 15px;      /* ← 从 26 缩到 20 */
     line-height: 1;
     position: relative;
     z-index: 1;
