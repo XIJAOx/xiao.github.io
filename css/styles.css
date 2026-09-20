@@ -5540,3 +5540,79 @@ select:focus-visible,
     fill: none;
     stroke: currentColor;
 }
+
+/* ==========================================================================
+   首页头像区改造 + 连接状态
+   ========================================================================== */
+
+.avatar-section {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    padding: 0 8px;
+    margin: 6px 0 24px !important;
+    gap: 12px;
+}
+
+.avatar-section .avatar-me {
+    align-items: flex-start;
+}
+
+.avatar-section .avatar-circle-me {
+    cursor: pointer;
+}
+
+.avatar-time {
+    font-size: 32px;
+    font-weight: 700;
+    color: #4dabf7;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    margin-top: 24px;
+    user-select: none;
+}
+
+/* 连接状态卡片 */
+.card-connection {
+    background: linear-gradient(135deg, #fff0f3 0%, #ffe6ec 55%, #ffe0e8 100%) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.card-connection::after {
+    content: "♥";
+    position: absolute;
+    right: -6px;
+    bottom: -18px;
+    font-size: 74px;
+    color: rgba(255, 107, 138, 0.1);
+    pointer-events: none;
+}
+
+.card-label-connection {
+    color: #e8556f;
+    position: relative;
+    z-index: 1;
+}
+
+.connection-hearts {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    font-size: 26px;
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+}
+
+.conn-heart {
+    color: #e8e8ef;
+    transition: color 0.3s ease, transform 0.3s ease;
+    user-select: none;
+}
+
+.conn-heart.active {
+    color: #ff6b8a;
+    text-shadow: 0 2px 8px rgba(255, 107, 138, 0.4);
+}
