@@ -919,6 +919,104 @@ window.addEventListener('unhandledrejection', function(e) {
 
         </div>
 
+<!-- ============================================================ -->
+<!-- ==================== 商城页面 ================================ -->
+<!-- ============================================================ -->
+<div class="screen screen-shop" id="screen-shop" data-screen="shop">
+
+    <!-- 头部 -->
+    <header class="shop-header">
+        <button class="header-icon" data-nav="home" aria-label="返回首页">←</button>
+        <h1 class="header-title" id="shop-title">商城</h1>
+        <button class="shop-balance" id="shop-balance-btn" data-action="edit-balance" aria-label="修改余额">
+            💰 余额：<span id="shop-balance">¥520.00</span>
+        </button>
+    </header>
+
+    <!-- 面板：商城 / 购物车 / 订单 -->
+    <div class="shop-panel-wrap">
+
+        <!-- 商城 -->
+        <div class="shop-panel active" data-shop-panel="shop">
+            <div class="shop-search-row">
+                <input type="text" class="shop-search" id="shop-search" placeholder="搜索商品..." aria-label="搜索商品">
+                <button class="shop-wish-btn" id="btn-shop-wish" data-action="wish-product">✏️ 许愿</button>
+            </div>
+
+            <div class="shop-tabs" id="shop-tabs">
+                <button class="shop-tab active" data-shop-tab="recommend">推荐</button>
+                <button class="shop-tab" data-shop-tab="takeout">外卖</button>
+            </div>
+
+            <div class="shop-products" id="shop-products"></div>
+        </div>
+
+        <!-- 购物车 -->
+        <div class="shop-panel" data-shop-panel="cart">
+            <div class="shop-cart-list" id="shop-cart-list"></div>
+            <div class="shop-cart-bar">
+                <label class="shop-cart-selectall">
+                    <input type="checkbox" id="cart-select-all">
+                    <span>全选</span>
+                </label>
+                <div class="shop-cart-total">
+                    合计：<span id="cart-total">¥0</span>
+                </div>
+                <button class="shop-cart-delete" id="btn-cart-delete" data-action="cart-delete">删除</button>
+                <button class="shop-cart-checkout" id="btn-cart-checkout" data-action="cart-checkout">结算</button>
+            </div>
+        </div>
+
+        <!-- 订单 -->
+        <div class="shop-panel" data-shop-panel="orders">
+            <div class="shop-order-tabs" id="shop-order-tabs">
+                <button class="shop-order-tab active" data-order-tab="all">全部</button>
+                <button class="shop-order-tab" data-order-tab="pending">待送达</button>
+                <button class="shop-order-tab" data-order-tab="done">已完成</button>
+                <button class="shop-order-tab" data-order-tab="cancelled">已取消</button>
+            </div>
+            <div class="shop-orders" id="shop-orders"></div>
+        </div>
+
+    </div>
+
+    <!-- 底部导航 -->
+    <nav class="shop-nav" id="shop-nav">
+        <button class="shop-nav-item active" data-shop-view="shop" aria-label="商城">
+            <span class="shop-nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <path d="M16 10a4 4 0 0 1-8 0"/>
+                </svg>
+            </span>
+            <span class="shop-nav-label">商城</span>
+        </button>
+        <button class="shop-nav-item" data-shop-view="cart" aria-label="购物车">
+            <span class="shop-nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="21" r="1"/>
+                    <circle cx="20" cy="21" r="1"/>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                </svg>
+            </span>
+            <span class="shop-nav-label">购物车</span>
+        </button>
+        <button class="shop-nav-item" data-shop-view="orders" aria-label="订单">
+            <span class="shop-nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+            </span>
+            <span class="shop-nav-label">订单</span>
+        </button>
+    </nav>
+
+</div>
+        
         <!-- ============================================================ -->
         <!-- ==================== 设置页面 ================================ -->
         <!-- ============================================================ -->
