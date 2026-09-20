@@ -5694,8 +5694,6 @@ select:focus-visible,
    ========================================================================== */
 
 .screen-shop {
-    display: flex;
-    flex-direction: column;
     background: var(--bg-page);
 }
 
