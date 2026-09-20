@@ -178,8 +178,8 @@ function createProductEl(p) {
     addBtn.textContent = '+';
     addBtn.setAttribute('aria-label', `添加 ${p.name} 到购物车`);
     addBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        addToCart(p.id);
+    e.stopPropagation();
+    openProductDialog(p.id);
     });
     footer.appendChild(addBtn);
 
