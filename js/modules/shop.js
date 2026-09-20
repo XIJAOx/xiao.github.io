@@ -201,6 +201,134 @@ overlay.querySelector('[data-role="gift"]').addEventListener('click', () => {
 }
 
 /**
+ * 选择梦角 → 送出
+ */
+function openCharacterPicker(product, message) {
+    const charData = get(KEYS.CHARACTERS);
+    const chars = (charData && charData.list) || [];
+
+    if (!chars.length) {
+        toast('还没有梦角，请先添加');
+        return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay active';
+
+    const listHTML = chars.map((c) => `
+        <div class="char-picker-row" data-char-id="${escapeHtml(c.id)}">
+            <div class="char-picker-avatar" data-avatar-src="${escapeHtml(c.avatar || '')}"></div>
+            <div class="char-picker-name">${escapeHtml(c.name)}</div>
+            <span class="char-picker-arrow">›</span>
+        </div>
+    `).join('');
+
+    overlay.innerHTML = `
+        <div class="modal" style="max-width: 340px;">
+            <div class="modal-header">
+                <h2 class="modal-title">选择梦角</h2>
+                <button class="modal-close" data-role="close" aria-label="关闭">✕</button>
+            </div>
+
+            <div class="char-picker-hint">
+                花 ¥${product.price} 买下「${escapeHtml(product.name)}」送给谁？
+            </div>
+
+            <div class="char-picker-list">
+                ${listHTML}
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn secondary" data-role="close" style="width:100%;">取消</button>
+            </div>
+        </div>
+    `;
+
+    // 渲染每个梦角头像
+    overlay.querySelectorAll('.char-picker-avatar').forEach((el) => {
+        const src = el.dataset.avatarSrc;
+        if (src) {
+            const img = document.createElement('img');
+            img.src = src;
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            el.appendChild(img);
+        } else {
+            el.innerHTML = `
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+            `;
+        }
+    });
+
+    const close = () => overlay.remove();
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || e.target.closest('[data-role="close"]')) close();
+    });
+
+    // 点某个梦角 → 送出
+    overlay.querySelectorAll('[data-char-id]').forEach((row) => {
+        row.addEventListener('click', async () => {
+            const charId = row.dataset.charId;
+            const char = chars.find((c) => c.id === charId);
+            if (!char) return;
+
+            close();
+            await giftToCharacter(product, message, char);
+        });
+    });
+
+    document.body.appendChild(overlay);
+}
+
+/**
+ * 实际送出
+ */
+async function giftToCharacter(product, message, char) {
+    const d = ensureShopData();
+
+    if (product.price > d.balance) {
+        toast(`余额不足，还差 ¥${(product.price - d.balance).toFixed(2)}`);
+        return;
+    }
+
+    const ok = await mjConfirm(
+        `花 ¥${product.price} 买下「${product.name}」送给「${char.name}」？` +
+        (message ? `\n留言：${message}` : ''),
+        { title: '确认送出' }
+    );
+    if (!ok) return;
+
+    d.balance -= product.price;
+
+    const order = {
+        id: uid('order'),
+        items: [{
+            productId: product.id,
+            name: product.name,
+            emoji: product.emoji,
+            price: product.price,
+            qty: 1
+        }],
+        total: product.price,
+        status: 'pending',
+        message,
+        toCharId: char.id,
+        toCharName: char.name,
+        ts: Date.now()
+    };
+    d.orders.push(order);
+    saveShopData(d);
+
+    renderAll();
+    toast(`已送给「${char.name}」🎁`);
+    switchView('orders');
+
+    // 让 TA 在聊天里回应
+    bus.emit('chat:ta-message', `谢谢你送我「${product.name}」！${message ? '（' + message + '）' : ''}好开心呀 ♥`);
+}
+
+/**
  * 根据商品名/价格生成一个渐变色
  */
 function getProductGradient(p) {
