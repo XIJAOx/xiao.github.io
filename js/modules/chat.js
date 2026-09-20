@@ -1547,19 +1547,7 @@ function clamp(n, min, max) {
 
 export const chatActions = {
 
-    'toggle-emoji-picker': async () => {
-        const emoji = await mjPrompt('输入一个 emoji', {
-            title: '插入表情',
-            placeholder: '例如 😊',
-            confirmText: '插入'
-        });
-        if (!emoji) return;
-        const input = byId('chat-input');
-        if (input) {
-            input.value += emoji;
-            input.focus();
-        }
-    },
+   'toggle-emoji-picker': () => openEmojiPanel(),
 
     'toggle-more-panel': async () => {
         const choice = await mjPrompt('输入序号：\n1. 发送图片\n2. 从字卡库选择\n3. 发起群聊', {
