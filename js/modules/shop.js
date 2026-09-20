@@ -70,6 +70,7 @@ function ensureShopData() {
     if (!Array.isArray(data.products)) data.products = [];
     if (!Array.isArray(data.cart)) data.cart = [];
     if (!Array.isArray(data.orders)) data.orders = [];
+    if (!Array.isArray(data.wishlist)) data.wishlist = [];
     set(KEYS.SHOP, data);
     return data;
 }
