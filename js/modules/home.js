@@ -591,6 +591,154 @@ function deleteAnniversary(id) {
    供 app.js 注册
    ========================================================================== */
 
+/* ==========================================================================
+   实时时间
+   ========================================================================== */
+
+let _clockTimer = null;
+
+function startClock() {
+    updateClock();
+    if (_clockTimer) clearInterval(_clockTimer);
+    _clockTimer = setInterval(updateClock, 30 * 1000);
+}
+
+function updateClock() {
+    const el = byId('avatar-time');
+    if (!el) return;
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    el.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+
+/* ==========================================================================
+   连接状态（1~6 颗心，每次进入页面随机）
+   ========================================================================== */
+
+function renderConnection() {
+    const el = byId('connection-hearts');
+    if (!el) return;
+
+    const count = randomInt(1, 6);
+    el.innerHTML = '';
+    for (let i = 0; i < 6; i++) {
+        const s = document.createElement('span');
+        s.className = 'conn-heart' + (i < count ? ' active' : '');
+        s.textContent = '♥';
+        el.appendChild(s);
+    }
+}
+
+
+/* ==========================================================================
+   头像 / 昵称点击 → 编辑弹窗
+   ========================================================================== */
+
+function bindAvatarAndName() {
+    const avatarEl = byId('avatar-me');
+    const nameEl = byId('avatar-label-me');
+    if (avatarEl) avatarEl.addEventListener('click', openMyProfileEditor);
+    if (nameEl) nameEl.addEventListener('click', openMyProfileEditor);
+}
+
+function openMyProfileEditor() {
+    const profile = get(KEYS.PROFILE);
+    let tempAvatar = profile.me.avatar || '';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay active';
+    overlay.innerHTML = `
+        <div class="modal" style="max-width: 340px;">
+            <div class="modal-header">
+                <h2 class="modal-title">我的资料</h2>
+                <button class="modal-close" data-role="close" aria-label="关闭">✕</button>
+            </div>
+
+            <div class="ta-profile-row">
+                <div class="ta-profile-avatar" id="my-editor-avatar"></div>
+                <input type="text" class="form-input ta-profile-name"
+                    id="my-editor-name"
+                    placeholder="输入昵称"
+                    value="${escapeHtml(profile.me.name || '我')}"
+                    maxlength="20"
+                    aria-label="我的昵称">
+            </div>
+
+            <button class="upload-btn" id="btn-my-editor-upload" type="button">📁 上传头像</button>
+
+            <div class="modal-actions">
+                <button class="modal-btn secondary" data-role="close">取消</button>
+                <button class="modal-btn primary" data-role="save">保存</button>
+            </div>
+        </div>
+    `;
+
+    const avatarEl = overlay.querySelector('#my-editor-avatar');
+    const renderAvatar = () => {
+        if (tempAvatar) {
+            avatarEl.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = tempAvatar;
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            avatarEl.appendChild(img);
+        } else {
+            avatarEl.innerHTML = `
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+            `;
+        }
+    };
+    renderAvatar();
+
+    overlay.querySelector('#btn-my-editor-upload').addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = () => {
+            const file = input.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                tempAvatar = reader.result;
+                renderAvatar();
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
+    });
+
+    const close = () => overlay.remove();
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || e.target.closest('[data-role="close"]')) close();
+    });
+
+    overlay.querySelector('[data-role="save"]').addEventListener('click', () => {
+        const nameInput = overlay.querySelector('#my-editor-name');
+        const newName = (nameInput.value || '').trim() || '我';
+
+        const data = get(KEYS.PROFILE);
+        data.me.name = newName;
+        data.me.avatar = tempAvatar;
+        set(KEYS.PROFILE, data);
+
+        bus.emit('profile:update');
+
+        // 立即刷新首页
+        renderProfile();
+
+        close();
+        toast('资料已更新');
+    });
+
+    document.body.appendChild(overlay);
+
+    setTimeout(() => {
+        overlay.querySelector('#my-editor-name')?.focus();
+    }, 120);
+}
+
 export const homeActions = {
     'checkin':            () => doCheckin(),
     'edit-daily-memo':    () => openMemoEditor(),
