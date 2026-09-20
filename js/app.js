@@ -96,6 +96,9 @@ const ALL_ACTIONS = {
     /* ---------- 喝水 ---------- */
     ...waterActions,
 
+    /* ---------- 喝水 ---------- */
+    ...shopActions,
+
     /* ---------- 设置 ---------- */
     ...settingsActions,
 
