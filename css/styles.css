@@ -5549,13 +5549,14 @@ select:focus-visible,
     display: flex !important;
     justify-content: space-between !important;
     align-items: flex-start !important;
-    padding: 0 8px;
+    padding: 0 40px 0 8px;   /* ← 右边留 40px，让时间往左挪 */
     margin: 6px 0 24px !important;
     gap: 12px;
 }
 
+/* 昵称在头像正下方居中 */
 .avatar-section .avatar-me {
-    align-items: flex-start;
+    align-items: center;
 }
 
 .avatar-section .avatar-circle-me {
@@ -5563,29 +5564,30 @@ select:focus-visible,
 }
 
 .avatar-time {
-    font-size: 32px;
+    font-size: 30px;
     font-weight: 700;
     color: #4dabf7;
     font-variant-numeric: tabular-nums;
     letter-spacing: 1.5px;
     line-height: 1;
-    margin-top: 24px;
+    margin-top: 22px;
     user-select: none;
 }
 
-/* 连接状态卡片 */
+/* 连接状态卡片（缩小版） */
 .card-connection {
     background: linear-gradient(135deg, #fff0f3 0%, #ffe6ec 55%, #ffe0e8 100%) !important;
     position: relative;
     overflow: hidden;
+    padding: 12px 16px !important;   /* ← 原来 18px 20px，改小 */
 }
 
 .card-connection::after {
     content: "♥";
     position: absolute;
-    right: -6px;
-    bottom: -18px;
-    font-size: 74px;
+    right: -4px;
+    bottom: -12px;
+    font-size: 54px;      /* ← 从 74 缩到 54 */
     color: rgba(255, 107, 138, 0.1);
     pointer-events: none;
 }
@@ -5594,13 +5596,14 @@ select:focus-visible,
     color: #e8556f;
     position: relative;
     z-index: 1;
+    font-size: 11px;
 }
 
 .connection-hearts {
     display: flex;
-    gap: 6px;
-    margin-top: 10px;
-    font-size: 26px;
+    gap: 4px;             /* ← 从 6 缩到 4 */
+    margin-top: 6px;      /* ← 从 10 缩到 6 */
+    font-size: 20px;      /* ← 从 26 缩到 20 */
     line-height: 1;
     position: relative;
     z-index: 1;
@@ -5614,5 +5617,5 @@ select:focus-visible,
 
 .conn-heart.active {
     color: #ff6b8a;
-    text-shadow: 0 2px 8px rgba(255, 107, 138, 0.4);
+    text-shadow: 0 2px 6px rgba(255, 107, 138, 0.4);
 }
