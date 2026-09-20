@@ -129,6 +129,138 @@ function renderProducts() {
     });
 }
 
+/* ==========================================================================
+   商品详情弹窗
+   ========================================================================== */
+
+function openProductDialog(productId) {
+    const data = ensureShopData();
+    const p = data.products.find((x) => x.id === productId);
+    if (!p) return;
+
+    const gradient = getProductGradient(p);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay active';
+    overlay.innerHTML = `
+        <div class="modal product-dialog">
+            <button class="product-dialog-close" data-role="close" aria-label="关闭">✕</button>
+
+            <div class="product-dialog-hero" style="background: ${gradient};">
+                <div class="product-dialog-emoji">${escapeHtml(p.emoji || '📦')}</div>
+            </div>
+
+            <div class="product-dialog-name">${escapeHtml(p.name)}</div>
+            <div class="product-dialog-price">¥${p.price}</div>
+
+            <div class="product-dialog-label">写给 默认 的话</div>
+            <textarea class="product-dialog-input" id="product-dialog-msg" rows="3" placeholder="这里是一句话"></textarea>
+
+            <div class="product-dialog-actions">
+                <button class="product-dialog-btn secondary" data-role="close">取消</button>
+                <button class="product-dialog-btn ghost" data-role="wish">♡ 加入心愿单</button>
+                <button class="product-dialog-btn primary" data-role="gift">送给梦角</button>
+            </div>
+
+            <div class="product-dialog-note">加入心愿单只是许愿不花钱——默认可能会买下它送你</div>
+        </div>
+    `;
+
+    const close = () => overlay.remove();
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || e.target.closest('[data-role="close"]')) close();
+    });
+
+    // 加入心愿单
+    overlay.querySelector('[data-role="wish"]').addEventListener('click', () => {
+        const d = ensureShopData();
+        if (!Array.isArray(d.wishlist)) d.wishlist = [];
+        d.wishlist.push({
+            id: uid('wish'),
+            productId: p.id,
+            name: p.name,
+            emoji: p.emoji,
+            price: p.price,
+            message: overlay.querySelector('#product-dialog-msg').value.trim(),
+            ts: Date.now()
+        });
+        saveShopData(d);
+        close();
+        toast('已加入心愿单 ♡');
+    });
+
+    // 送给梦角
+    overlay.querySelector('[data-role="gift"]').addEventListener('click', async () => {
+        const msg = overlay.querySelector('#product-dialog-msg').value.trim();
+        const d = ensureShopData();
+
+        if (p.price > d.balance) {
+            toast(`余额不足，还差 ¥${(p.price - d.balance).toFixed(2)}`);
+            return;
+        }
+
+        const ok = await mjConfirm(
+            `花 ¥${p.price} 买下「${p.name}」送给 TA？` + (msg ? `\n留言：${msg}` : ''),
+            { title: '送给梦角' }
+        );
+        if (!ok) return;
+
+        d.balance -= p.price;
+        const order = {
+            id: uid('order'),
+            items: [{
+                productId: p.id,
+                name: p.name,
+                emoji: p.emoji,
+                price: p.price,
+                qty: 1
+            }],
+            total: p.price,
+            status: 'pending',
+            message: msg,
+            ts: Date.now()
+        };
+        d.orders.push(order);
+        saveShopData(d);
+
+        close();
+        renderAll();
+        toast('已送出 🎁');
+        switchView('orders');
+
+        // 让 TA 在聊天里回应
+        bus.emit('chat:ta-message', `谢谢你送我「${p.name}」！${msg ? '（' + msg + '）' : ''}好开心呀 ♥`);
+    });
+
+    document.body.appendChild(overlay);
+}
+
+/**
+ * 根据商品名/价格生成一个渐变色
+ */
+function getProductGradient(p) {
+    const colors = [
+        ['#ffd3dc', '#ffb3c4'],
+        ['#dbe4ff', '#b9c7ff'],
+        ['#d3f9d8', '#a9e6b3'],
+        ['#ffe3d3', '#ffc4a8'],
+        ['#f3e8ff', '#d8c2ff'],
+        ['#d0ebff', '#a5d8ff'],
+        ['#ffec99', '#ffe066'],
+        ['#c5f6ee', '#99e9d6'],
+        ['#ffc9c9', '#ffa8a8'],
+        ['#eebefa', '#da77f2']
+    ];
+    // 用商品 id 做一个稳定的 hash
+    let hash = 0;
+    const s = String(p.id || p.name || '');
+    for (let i = 0; i < s.length; i++) {
+        hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+    }
+    const pair = colors[hash % colors.length];
+    return `linear-gradient(135deg, ${pair[0]}, ${pair[1]})`;
+}
+
 function createProductEl(p) {
     const card = document.createElement('div');
     card.className = 'shop-product';
