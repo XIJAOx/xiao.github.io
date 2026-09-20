@@ -1172,25 +1172,6 @@ function bindDataModal() {
             input.click();
         });
     }
-
-    const deleteBtn = byId('btn-delete-chat');
-if (const deleteBtn = byId('btn-delete-chat');
-if (deleteBtn) {
-    deleteBtn.addEventListener('click', async () => {
-        closeModal('modal-data');
-        const ok = await mjConfirm('确定要删除当前梦角的聊天记录吗？', {
-            title: '删除聊天记录'
-        });
-        if (!ok) return;
-        const chat = get(KEYS.CHAT);
-        const id = getCurrentCharacterId();
-        chat[id] = { messages: [], lastReadTs: 0, draft: '' };
-        set(KEYS.CHAT, chat);
-        renderChatMessages();
-        renderChatList();
-        toast('聊天记录已删除');
-      });
-    }
 }
 
 
