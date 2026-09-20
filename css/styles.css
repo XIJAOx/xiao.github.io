@@ -5523,3 +5523,20 @@ select:focus-visible,
         saturate(6);
     /* 把彩色 emoji 抽色后染成浅蓝 */
 }
+
+/* ==========================================================================
+   设置页 SVG 图标 → 蓝色（覆盖之前的 emoji filter）
+   ========================================================================== */
+
+.settings-row-icon {
+    color: #4dabf7;
+    filter: none !important;   /* 关键：取消之前对 emoji 的染色滤镜 */
+}
+
+.settings-row-icon svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+}
