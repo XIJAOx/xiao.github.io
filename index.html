@@ -34,23 +34,15 @@ window.addEventListener('unhandledrejection', function(e) {
 
                     <!-- TA 与我 头像区 -->
                     <div class="avatar-section" id="avatar-section">
-                        <div class="avatar avatar-ta" id="avatar-ta" data-user="ta">
-                            <div class="avatar-circle avatar-circle-ta" id="avatar-circle-ta">
-                                <svg class="avatar-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                                </svg>
-                            </div>
-                            <span class="avatar-label avatar-label-ta" id="avatar-label-ta">TA</span>
-                        </div>
-                        <div class="heart-icon" id="heart-icon-home" aria-hidden="true">♥</div>
-                        <div class="avatar avatar-me" id="avatar-me" data-user="me">
-                            <div class="avatar-circle avatar-circle-me" id="avatar-circle-me">
-                                <svg class="avatar-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                                </svg>
-                            </div>
-                            <span class="avatar-label avatar-label-me" id="avatar-label-me">我</span>
-                        </div>
+    <div class="avatar avatar-me" id="avatar-me" data-user="me" role="button" tabindex="0" aria-label="点击修改我的头像">
+        <div class="avatar-circle avatar-circle-me" id="avatar-circle-me">
+            <svg class="avatar-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+        </div>
+        <span class="avatar-label avatar-label-me" id="avatar-label-me" role="button" tabindex="0" aria-label="点击修改昵称">我</span>
+    </div>
+    <div class="avatar-time" id="avatar-time">--:--</div>
                     </div>
 
                     <!-- 情话与备忘卡片 -->
