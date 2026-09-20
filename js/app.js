@@ -302,7 +302,7 @@ const BOOT_ORDER = [
     { name: 'initMusic',      fn: initMusic },
     { name: 'initQuestions',  fn: initQuestions },
     { name: 'initWater',      fn: initWater },
-    { name: 'initShop',       fn: initShop }
+    { name: 'initShop',       fn: initShop },
     { name: 'initCall',       fn: initCall }
 ];
 
