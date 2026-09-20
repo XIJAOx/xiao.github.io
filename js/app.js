@@ -96,7 +96,7 @@ const ALL_ACTIONS = {
     /* ---------- 喝水 ---------- */
     ...waterActions,
 
-    /* ---------- 喝水 ---------- */
+    /* ---------- 商城 ---------- */
     ...shopActions,
 
     /* ---------- 设置 ---------- */
@@ -183,7 +183,10 @@ const RAW_NAVS = {
     ...questionsNavs,
 
     /* ---------- 喝水 ---------- */
-    ...waterNavs
+    ...waterNavs，
+
+    /* ---------- 商城 ---------- */
+    ...shopNavs
 };
 
 const ALL_NAVS = {};
