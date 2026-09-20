@@ -127,6 +127,7 @@ export const KEYS = {
     CHARACTERS:      'characters',    // 梦角列表
     PROFILE:         'profile',        // TA 与我的资料（名字/头像等）
     WATER:           'water',          // 喝水记录（留一个别名方便）
+    SHOP:            'shop',           // 商城
     META:            'meta'            // 应用元信息（版本、首次打开时间）
 };
 
