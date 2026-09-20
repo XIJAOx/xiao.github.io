@@ -71,78 +71,79 @@ window.addEventListener('unhandledrejection', function(e) {
 
                     <!-- 功能网格菜单（第一页） -->
                     <nav class="grid-menu grid-menu-1" id="grid-menu-1" aria-label="功能菜单">
-                        <button class="grid-item grid-item-chat" id="grid-chat" data-nav="chat-list" data-action="nav-chat-list" aria-label="聊天">
-                            <span class="grid-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                                </svg>
-                            </span>
-                            <span class="grid-label" id="grid-label-chat">聊天</span>
-                        </button>
-                        <button class="grid-item grid-item-anniversary" id="grid-anniversary" data-modal="modal-anniversary" data-action="open-anniversary" aria-label="纪念日">
-                            <span class="grid-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                                </svg>
-                            </span>
-                            <span class="grid-label" id="grid-label-anniversary">纪念日</span>
-                        </button>
-                        <button class="grid-item grid-item-letter" id="grid-letter" data-nav="letters" data-action="nav-letters" aria-label="信件">
-                            <span class="grid-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                                    <polyline points="22,6 12,13 2,6"/>
-                                </svg>
-                            </span>
-                            <span class="grid-label" id="grid-label-letter">信件</span>
-                        </button>
-                        <button class="grid-item grid-item-moments" id="grid-moments" data-nav="moments" data-action="nav-moments" aria-label="朋友圈">
-                            <span class="grid-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                    <circle cx="9" cy="7" r="4"></circle>
-                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                                </svg>
-                            </span>
-                            <span class="grid-label" id="grid-label-moments">朋友圈</span>
-                        </button>
-                        <button class="grid-item grid-item-period" id="grid-period" data-nav="period" data-action="nav-period" aria-label="经期记录">
-                            <span class="grid-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                                </svg>
-                            </span>
-                            <button class="grid-item grid-item-shop" id="grid-shop" data-nav="shop" data-action="nav-shop" aria-label="商城">
-    <span class="grid-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <path d="M16 10a4 4 0 0 1-8 0"/>
-        </svg>
-    </span>
-    <span class="grid-label" id="grid-label-shop">商城</span>
-                            </button>
-                        <button class="grid-item grid-item-divine" id="grid-divine" data-nav="divine" data-action="nav-divine" aria-label="占卜">
-                            <span class="grid-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                                </svg>
-                            </span>
-                            <span class="grid-label" id="grid-label-divine">占卜</span>
-                        </button>
-                        <button class="grid-item grid-item-favorites" id="grid-favorites" data-nav="favorites" data-action="nav-favorites" aria-label="收藏">
-                            <span class="grid-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                                </svg>
-                            </span>
-                            <span class="grid-label" id="grid-label-favorites">收藏</span>
-                        </button>
-                    </nav>
+    <button class="grid-item grid-item-chat" id="grid-chat" data-nav="chat-list" data-action="nav-chat-list" aria-label="聊天">
+        <span class="grid-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+        </span>
+        <span class="grid-label" id="grid-label-chat">聊天</span>
+    </button>
+    <button class="grid-item grid-item-anniversary" id="grid-anniversary" data-modal="modal-anniversary" data-action="open-anniversary" aria-label="纪念日">
+        <span class="grid-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+        </span>
+        <span class="grid-label" id="grid-label-anniversary">纪念日</span>
+    </button>
+    <button class="grid-item grid-item-letter" id="grid-letter" data-nav="letters" data-action="nav-letters" aria-label="信件">
+        <span class="grid-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+            </svg>
+        </span>
+        <span class="grid-label" id="grid-label-letter">信件</span>
+    </button>
+    <button class="grid-item grid-item-moments" id="grid-moments" data-nav="moments" data-action="nav-moments" aria-label="朋友圈">
+        <span class="grid-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+        </span>
+        <span class="grid-label" id="grid-label-moments">朋友圈</span>
+    </button>
+    <button class="grid-item grid-item-shop" id="grid-shop" data-nav="shop" data-action="nav-shop" aria-label="商城">
+        <span class="grid-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+        </span>
+        <span class="grid-label" id="grid-label-shop">商城</span>
+    </button>
+    <button class="grid-item grid-item-message-stats" id="grid-message-stats" data-nav="message-stats" data-action="nav-message-stats" aria-label="消息记录">
+        <span class="grid-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+        </span>
+        <span class="grid-label" id="grid-label-message-stats">消息记录</span>
+    </button>
+    <button class="grid-item grid-item-divine" id="grid-divine" data-nav="divine" data-action="nav-divine" aria-label="占卜">
+        <span class="grid-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+        </span>
+        <span class="grid-label" id="grid-label-divine">占卜</span>
+    </button>
+    <button class="grid-item grid-item-favorites" id="grid-favorites" data-nav="favorites" data-action="nav-favorites" aria-label="收藏">
+        <span class="grid-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+        </span>
+        <span class="grid-label" id="grid-label-favorites">收藏</span>
+    </button>
+</nav>
 
                 </section>
 
