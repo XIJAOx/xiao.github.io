@@ -138,15 +138,11 @@ function renderDailyLove() {
 }
 
 function renderDailyMemo() {
+    // 首页第一页已改成"连接状态"，不再渲染备忘
+    // 第二页的备忘仍需渲染
     const data = get(KEYS.DAILY_MEMO);
     const text = (data.text || '').trim();
     const isPlaceholder = !text;
-
-    const el1 = byId('daily-memo-text');
-    if (el1) {
-        el1.textContent = isPlaceholder ? MEMO_PLACEHOLDER : text;
-        el1.classList.toggle('card-placeholder', isPlaceholder);
-    }
 
     const el2 = byId('home-memo-text');
     if (el2) {
