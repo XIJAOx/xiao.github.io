@@ -1593,7 +1593,20 @@ export const chatActions = {
 
     'export-chat': () => byId('btn-export-chat')?.click(),
     'import-chat': () => byId('btn-import-chat')?.click(),
-    'delete-chat': () => byId('btn-delete-chat')?.click(),
+    'delete-chat': async () => {
+    closeModal('modal-data');
+    const ok = await mjConfirm('确定要删除当前梦角的聊天记录吗？', {
+        title: '删除聊天记录'
+    });
+    if (!ok) return;
+    const chat = get(KEYS.CHAT);
+    const id = getCurrentCharacterId();
+    chat[id] = { messages: [], lastReadTs: 0, draft: '' };
+    set(KEYS.CHAT, chat);
+    renderChatMessages();
+    renderChatList();
+    toast('聊天记录已删除');
+},
     'create-group-chat': () => byId('btn-create-group-chat')?.click(),
 
     'search-chat': async () => {
