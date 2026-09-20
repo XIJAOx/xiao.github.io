@@ -11,7 +11,8 @@ import {
     setVisible, setText, setPlaceholder,
     formatDate, formatDuration, formatYearMonth,
     scrollToBottom,
-    randomPick, uid
+        randomPick, randomInt, uid,
+    escapeHtml
 } from '../utils/dom.js';
 
 import {
