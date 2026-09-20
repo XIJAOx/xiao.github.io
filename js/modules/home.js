@@ -482,57 +482,154 @@ function openAnniversaryModal() {
     openModal('modal-anniversary');
 }
 
-function renderAnniversaryList() {
+function ensureAnniversaryDefaults() {
     const data = get(KEYS.ANNIVERSARY);
-    const items = Array.isArray(data.items) ? data.items : [];
+    if (!Array.isArray(data.items)) data.items = [];
+
+    if (data.items.length === 0) {
+        const meta = get(KEYS.META);
+        const firstOpenAt = meta.firstOpenAt || Date.now();
+        const d = new Date(firstOpenAt);
+        const pad = (n) => String(n).padStart(2, '0');
+        const ymd = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+        data.items.push({
+            id: uid('ann'),
+            name: '和 TA 在一起',
+            date: ymd,
+            isDefault: true
+        });
+        set(KEYS.ANNIVERSARY, data);
+    }
+    return data;
+}
+
+function renderAnniversaryList() {
+    const data = ensureAnniversaryDefaults();
     const listEl = byId('anniversary-list');
-    const emptyEl = byId('anniversary-empty');
     if (!listEl) return;
 
-    if (!items.length) {
-        listEl.hidden = true;
-        listEl.innerHTML = '';
-        if (emptyEl) emptyEl.hidden = false;
+    listEl.innerHTML = '';
+
+    data.items.forEach((item) => {
+        const card = document.createElement('div');
+        card.className = 'anniversary-card';
+        card.dataset.annId = item.id;
+
+        const title = document.createElement('div');
+        title.className = 'anniversary-card-title';
+        title.textContent = item.name || '纪念日';
+        card.appendChild(title);
+
+        const daysWrap = document.createElement('div');
+        daysWrap.className = 'anniversary-card-days';
+        const num = document.createElement('span');
+        num.className = 'anniversary-card-num';
+        num.textContent = calcAnniversaryDaysNum(item.date);
+        daysWrap.appendChild(num);
+        const unit = document.createElement('span');
+        unit.className = 'anniversary-card-unit';
+        unit.textContent = '天';
+        daysWrap.appendChild(unit);
+        card.appendChild(daysWrap);
+
+        card.addEventListener('click', () => openAnniversaryOptions(item));
+
+        listEl.appendChild(card);
+    });
+}
+
+function calcAnniversaryDaysNum(dateStr) {
+    if (!dateStr) return '0';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '0';
+    d.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.round((today - d) / 86400000);
+    return String(Math.abs(diff));
+}
+
+async function openAnniversaryOptions(item) {
+    const choice = await mjPrompt('输入序号操作：\n1. 修改名称\n2. 修改日期\n3. 删除', {
+        title: item.name || '纪念日',
+        defaultValue: '1',
+        confirmText: '执行'
+    });
+    if (choice === null) return;
+
+    const n = parseInt(String(choice).trim(), 10);
+    if (n === 1) {
+        const name = await mjPrompt('新的名称：', { defaultValue: item.name, confirmText: '保存' });
+        if (name === null) return;
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        updateAnniversaryItem(item.id, { name: trimmed });
+    } else if (n === 2) {
+        const date = await mjPrompt('新的日期（2024-05-20）：', { defaultValue: item.date, confirmText: '保存' });
+        if (date === null) return;
+        const trimmed = date.trim();
+        if (!/^\d{4}-\d{1,2}-\d{1,2}$/.test(trimmed)) {
+            toast('日期格式不正确');
+            return;
+        }
+        updateAnniversaryItem(item.id, { date: trimmed });
+    } else if (n === 3) {
+        const ok = await mjConfirm('删除这个纪念日？', { title: '删除' });
+        if (!ok) return;
+        deleteAnniversary(item.id);
+    }
+}
+
+function updateAnniversaryItem(id, patch) {
+    const data = ensureAnniversaryDefaults();
+    const item = data.items.find((x) => x.id === id);
+    if (!item) return;
+    Object.assign(item, patch);
+    set(KEYS.ANNIVERSARY, data);
+    renderAnniversaryList();
+    toast('已保存');
+}
+
+async function addAnniversary() {
+    const name = await mjPrompt('纪念日名称（如：在一起、生日）：', {
+        title: '添加纪念日',
+        confirmText: '下一步'
+    });
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    const date = await mjPrompt('日期（格式：2024-05-20）：', {
+        title: '添加纪念日',
+        confirmText: '保存'
+    });
+    if (date === null) return;
+    const dateTrimmed = date.trim();
+    if (!/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateTrimmed)) {
+        toast('日期格式不正确');
         return;
     }
 
-    if (emptyEl) emptyEl.hidden = true;
-    listEl.hidden = false;
-    listEl.innerHTML = '';
-
-    items.forEach((item) => {
-        const row = document.createElement('div');
-        row.className = 'anniversary-item';
-
-        const info = document.createElement('div');
-
-        const name = document.createElement('div');
-        name.className = 'anniversary-name';
-        name.textContent = item.name || '纪念日';
-
-        const date = document.createElement('div');
-        date.className = 'anniversary-date';
-        date.textContent = item.date || '';
-
-        info.appendChild(name);
-        info.appendChild(date);
-
-        const daysEl = document.createElement('div');
-        daysEl.className = 'anniversary-days';
-        daysEl.textContent = calcAnniversaryDays(item.date);
-
-        row.appendChild(info);
-        row.appendChild(daysEl);
-
-        row.addEventListener('click', async () => {
-            const ok = await mjConfirm(`删除「${item.name}」？`, {
-                title: '删除纪念日'
-            });
-            if (ok) deleteAnniversary(item.id);
-        });
-
-        listEl.appendChild(row);
+    const data = ensureAnniversaryDefaults();
+    data.items.push({
+        id: uid('ann'),
+        name: trimmed,
+        date: dateTrimmed,
+        isYearly: true
     });
+    set(KEYS.ANNIVERSARY, data);
+    renderAnniversaryList();
+    toast('已添加');
+}
+
+function deleteAnniversary(id) {
+    const data = ensureAnniversaryDefaults();
+    data.items = data.items.filter((x) => x.id !== id);
+    set(KEYS.ANNIVERSARY, data);
+    renderAnniversaryList();
+    toast('已删除');
+}
 }
 
 function calcAnniversaryDays(dateStr) {
