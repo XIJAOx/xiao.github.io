@@ -5619,3 +5619,72 @@ select:focus-visible,
     color: #ff6b8a;
     text-shadow: 0 2px 6px rgba(255, 107, 138, 0.4);
 }
+
+/* ==========================================================================
+   连接状态 + 打卡 并排
+   ========================================================================== */
+
+.connection-checkin-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: stretch;
+}
+
+.connection-checkin-row .card-connection {
+    flex: 0 0 40%;
+    margin-bottom: 0 !important;
+    padding: 10px 12px !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.connection-checkin-row .card-connection::after {
+    font-size: 44px !important;
+    right: -4px !important;
+    bottom: -12px !important;
+}
+
+.connection-checkin-row .card-label-connection {
+    font-size: 10px !important;
+    letter-spacing: 0.5px;
+}
+
+.connection-checkin-row .connection-hearts {
+    font-size: 15px !important;
+    gap: 3px !important;
+    margin-top: 6px !important;
+}
+
+.connection-checkin-row .checkin-card {
+    flex: 1 1 auto;
+    margin-bottom: 0 !important;
+    padding: 10px 12px !important;
+    gap: 4px !important;
+    align-items: stretch;
+}
+
+.connection-checkin-row .checkin-info {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.connection-checkin-row .checkin-title {
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+    white-space: normal !important;
+}
+
+.connection-checkin-row .checkin-sub {
+    font-size: 11px !important;
+    margin-top: 2px !important;
+}
+
+.connection-checkin-row .checkin-btn {
+    min-width: 56px !important;
+    height: 30px !important;
+    font-size: 12px !important;
+    padding: 0 10px !important;
+    align-self: flex-end;
+}
