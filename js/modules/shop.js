@@ -191,7 +191,6 @@ function openProductDialog(productId) {
     });
 
     // 送给梦角
-    // 送给梦角
 overlay.querySelector('[data-role="gift"]').addEventListener('click', () => {
     const msg = overlay.querySelector('#product-dialog-msg').value.trim();
     close();
