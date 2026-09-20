@@ -1730,9 +1730,184 @@ function openEmojiPanel() {
     document.body.appendChild(overlay);
 }
 
-function sendEmoji(emoji) {
-    appendMessage({ role: 'me', type: 'text', content: emoji });
-    scheduleAutoReply();
+/* ---------- 表情包面板（自定义图片） ---------- */
+
+function getStickers() {
+    const data = get(KEYS.STICKERS);
+    if (!Array.isArray(data.items)) data.items = [];
+    return data;
+}
+
+function saveStickers(data) {
+    set(KEYS.STICKERS, data);
+}
+
+function openEmojiPanel() {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay active';
+    overlay.id = 'sticker-panel-overlay';
+    overlay.innerHTML = `
+        <div class="emoji-panel">
+            <div class="emoji-panel-header">
+                <span class="emoji-panel-title">表情包</span>
+                <div class="emoji-panel-header-actions">
+                    <button class="emoji-panel-add" data-role="add" aria-label="添加表情包">+ 添加</button>
+                    <button class="emoji-panel-close" data-role="close" aria-label="关闭">✕</button>
+                </div>
+            </div>
+            <div class="emoji-panel-body" id="sticker-panel-body"></div>
+        </div>
+    `;
+
+    const body = overlay.querySelector('#sticker-panel-body');
+
+    const renderBody = () => {
+        const data = getStickers();
+        body.innerHTML = '';
+
+        if (!data.items.length) {
+            const empty = document.createElement('div');
+            empty.className = 'sticker-empty';
+            empty.innerHTML = `
+                <div style="font-size:42px;opacity:0.35;margin-bottom:12px;">🖼</div>
+                <div style="font-size:14px;color:var(--c-text-3);line-height:1.6;">
+                    还没有表情包<br>
+                    点右上角「+ 添加」上传图片
+                </div>
+            `;
+            body.appendChild(empty);
+            return;
+        }
+
+        const grid = document.createElement('div');
+        grid.className = 'sticker-grid';
+
+        data.items.forEach((sticker) => {
+            const wrap = document.createElement('div');
+            wrap.className = 'sticker-item';
+
+            const img = document.createElement('img');
+            img.src = sticker.url;
+            img.alt = sticker.name || '';
+            img.loading = 'lazy';
+            wrap.appendChild(img);
+
+            // 点击发送
+            wrap.addEventListener('click', () => {
+                appendMessage({ role: 'me', type: 'image', content: sticker.url });
+                scheduleAutoReply();
+                overlay.remove();
+            });
+
+            // 长按删除
+            let pressTimer = null;
+            const startPress = () => {
+                pressTimer = setTimeout(async () => {
+                    const ok = await mjConfirm('删除这个表情包？', { title: '删除表情包' });
+                    if (ok) {
+                        const d = getStickers();
+                        d.items = d.items.filter((s) => s.id !== sticker.id);
+                        saveStickers(d);
+                        renderBody();
+                        toast('已删除');
+                    }
+                }, 600);
+            };
+            const cancelPress = () => {
+                if (pressTimer) clearTimeout(pressTimer);
+                pressTimer = null;
+            };
+            wrap.addEventListener('touchstart', startPress, { passive: true });
+            wrap.addEventListener('touchend', cancelPress);
+            wrap.addEventListener('touchmove', cancelPress);
+            wrap.addEventListener('touchcancel', cancelPress);
+            wrap.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                cancelPress();
+                mjConfirm('删除这个表情包？', { title: '删除表情包' }).then((ok) => {
+                    if (!ok) return;
+                    const d = getStickers();
+                    d.items = d.items.filter((s) => s.id !== sticker.id);
+                    saveStickers(d);
+                    renderBody();
+                    toast('已删除');
+                });
+            });
+
+            grid.appendChild(wrap);
+        });
+
+        body.appendChild(grid);
+    };
+    renderBody();
+
+    // 添加表情包
+    overlay.querySelector('[data-role="add"]').addEventListener('click', () => {
+        addSticker(renderBody);
+    });
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || e.target.closest('[data-role="close"]')) {
+            overlay.remove();
+        }
+    });
+
+    document.body.appendChild(overlay);
+}
+
+async function addSticker(onDone) {
+    const choice = await mjPrompt('选择添加方式：\n1. 从相册上传\n2. 输入图片 URL', {
+        title: '添加表情包',
+        defaultValue: '1',
+        confirmText: '确定'
+    });
+    if (choice === null) return;
+
+    const n = parseInt(String(choice).trim(), 10);
+
+    if (n === 1) {
+        // 从相册上传
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = () => {
+            const file = input.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const data = getStickers();
+                data.items.push({
+                    id: uid('sticker'),
+                    url: reader.result,
+                    name: file.name || '',
+                    ts: Date.now()
+                });
+                saveStickers(data);
+                onDone && onDone();
+                toast('已添加');
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
+    } else if (n === 2) {
+        // 输入 URL
+        const url = await mjPrompt('输入图片 URL：', {
+            title: '添加表情包',
+            placeholder: 'https://.../xxx.png',
+            confirmText: '添加'
+        });
+        if (!url) return;
+        const data = getStickers();
+        data.items.push({
+            id: uid('sticker'),
+            url: url.trim(),
+            name: '',
+            ts: Date.now()
+        });
+        saveStickers(data);
+        onDone && onDone();
+        toast('已添加');
+    }
 }
 
 function pickAndSendImage() {
