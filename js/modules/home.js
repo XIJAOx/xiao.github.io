@@ -624,7 +624,6 @@ function deleteAnniversary(id) {
     renderAnniversaryList();
     toast('已删除');
 }
-}
 
 function calcAnniversaryDays(dateStr) {
     if (!dateStr) return '';
