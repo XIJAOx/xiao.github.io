@@ -638,14 +638,6 @@ function calcAnniversaryDays(dateStr) {
     return `还有 ${-diff} 天`;
 }
 
-function deleteAnniversary(id) {
-    const data = get(KEYS.ANNIVERSARY);
-    data.items = (data.items || []).filter((x) => x.id !== id);
-    set(KEYS.ANNIVERSARY, data);
-    renderAnniversaryList();
-    toast('已删除');
-}
-
 
 /* ==========================================================================
    供 app.js 注册
