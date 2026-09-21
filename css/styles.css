@@ -6430,3 +6430,18 @@ select:focus-visible,
 .anniversary-add:active {
     background: var(--c-bg-2);
 }
+
+/* ==========================================================================
+   强制激活屏幕显示（救急）
+   ========================================================================== */
+
+.screen.active {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 1;
+}
+
+.screen:not(.active) {
+    display: none !important;
+}
