@@ -637,27 +637,78 @@ function updateWordCardButtons() {
 function onWordCardImport() {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json';
+    input.accept = '.json,application/json';
     input.onchange = async () => {
         const file = input.files?.[0];
         if (!file) return;
+
         try {
             const text = await readFileAsText(file);
             const parsed = JSON.parse(text);
+
             if (!parsed || typeof parsed !== 'object') {
                 toast('文件格式不正确');
                 return;
             }
+
+            // 支持两种格式：
+            // 1. { main:[...], kaomoji:[...], emoji:[...] }
+            // 2. [ {...}, {...} ]  → 视为 main
+            let importData = parsed;
+            if (Array.isArray(parsed)) {
+                importData = { main: parsed };
+            } else if (parsed.data && typeof parsed.data === 'object') {
+                // 兼容 { data: {...} } 形式
+                importData = parsed.data;
+            }
+
             const data = get(KEYS.WORD_CARD);
-            Object.keys(parsed).forEach((k) => {
-                if (Array.isArray(parsed[k])) {
-                    data[k] = (data[k] || []).concat(parsed[k]);
-                }
+            const validKeys = ['main', 'kaomoji', 'emoji', 'sticker', 'voice'];
+            let totalAdded = 0;
+
+            validKeys.forEach((k) => {
+                if (!Array.isArray(importData[k])) return;
+                if (!Array.isArray(data[k])) data[k] = [];
+
+                importData[k].forEach((it) => {
+                    if (!it || typeof it !== 'object') return;
+                    // 补齐 id
+                    if (!it.id) it.id = uid('wc');
+                    data[k].push(it);
+                    totalAdded++;
+                });
             });
+
+            if (totalAdded === 0) {
+                toast('文件里没有可导入的字卡');
+                return;
+            }
+
             set(KEYS.WORD_CARD, data);
+
+            // 清空筛选，切到主字卡，重新渲染
+            _currentWordCardFolder = null;
+            _wordCardSelectMode = false;
+            _selectedWordCardIds.clear();
+
+            // 保证当前 tab 有内容
+            if (!data[_currentWordCardTab] || !data[_currentWordCardTab].length) {
+                _currentWordCardTab = 'main';
+                // 同步 tab 按钮
+                const tabsEl = byId('word-card-tabs');
+                if (tabsEl) {
+                    tabsEl.querySelectorAll('[data-word-card-tab]').forEach((btn) => {
+                        const active = btn.dataset.wordCardTab === 'main';
+                        btn.classList.toggle('active', active);
+                        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+                    });
+                }
+            }
+
             renderWordCardList();
-            toast('字卡已导入');
+            toast(`已导入 ${totalAdded} 张字卡`);
         } catch (e) {
+            console.error('[word-card-import]', e);
             toast('导入失败：' + (e.message || '未知错误'));
         }
     };
