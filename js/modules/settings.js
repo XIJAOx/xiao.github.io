@@ -651,33 +651,102 @@ function onWordCardImport() {
                 return;
             }
 
-            // 支持两种格式：
-            // 1. { main:[...], kaomoji:[...], emoji:[...] }
-            // 2. [ {...}, {...} ]  → 视为 main
-            let importData = parsed;
-            if (Array.isArray(parsed)) {
-                importData = { main: parsed };
-            } else if (parsed.data && typeof parsed.data === 'object') {
-                // 兼容 { data: {...} } 形式
-                importData = parsed.data;
-            }
-
             const data = get(KEYS.WORD_CARD);
             const validKeys = ['main', 'kaomoji', 'emoji', 'sticker', 'voice'];
+            validKeys.forEach((k) => {
+                if (!Array.isArray(data[k])) data[k] = [];
+            });
+
             let totalAdded = 0;
 
-            validKeys.forEach((k) => {
-                if (!Array.isArray(importData[k])) return;
-                if (!Array.isArray(data[k])) data[k] = [];
+            // ---------- 情况 1：我们自己的格式 ----------
+            const ourKeys = ['main', 'kaomoji', 'emoji', 'sticker', 'voice'];
+            const hasOurKey = ourKeys.some((k) => Array.isArray(parsed[k]));
+            const target = parsed.data && typeof parsed.data === 'object' ? parsed.data : parsed;
+            const hasOurKeyInData = ourKeys.some((k) => Array.isArray(target[k]));
 
-                importData[k].forEach((it) => {
-                    if (!it || typeof it !== 'object') return;
-                    // 补齐 id
-                    if (!it.id) it.id = uid('wc');
-                    data[k].push(it);
-                    totalAdded++;
+            if (hasOurKey || hasOurKeyInData) {
+                const src = hasOurKeyInData ? target : parsed;
+                ourKeys.forEach((k) => {
+                    if (!Array.isArray(src[k])) return;
+                    src[k].forEach((it) => {
+                        if (!it || typeof it !== 'object') return;
+                        if (!it.id) it.id = uid('wc');
+                        data[k].push(it);
+                        totalAdded++;
+                    });
                 });
-            });
+            } else {
+                // ---------- 情况 2：外部 App 格式 ----------
+                // 尝试多个常见字段名
+                const pickArray = (...keys) => {
+                    for (const k of keys) {
+                        if (Array.isArray(parsed[k]) && parsed[k].length) return parsed[k];
+                    }
+                    return null;
+                };
+
+                const normalizeItem = (it, tab) => {
+                    if (it == null) return null;
+
+                    // 字符串
+                    if (typeof it === 'string') {
+                        const s = it.trim();
+                        if (!s) return null;
+                        return tab === 'emoji'
+                            ? { id: uid('wc'), text: s }
+                            : { id: uid('wc'), text: s };
+                    }
+
+                    // 对象
+                    if (typeof it === 'object') {
+                        // 优先 text / content / reply / value
+                        const textCandidate =
+                            it.text ?? it.content ?? it.reply ?? it.value ??
+                            it.title ?? it.name ?? it.msg ?? it.message;
+
+                        // 是否明显是 emoji
+                        const emojiCandidate = it.emoji ?? it.icon;
+
+                        const obj = { id: it.id || uid('wc') };
+
+                        if (textCandidate != null) obj.text = String(textCandidate);
+                        if (emojiCandidate != null) obj.emoji = String(emojiCandidate);
+                        if (it.folder) obj.folder = String(it.folder);
+                        if (it.group) obj.folder = String(it.group);
+                        if (it.url) obj.url = String(it.url);
+
+                        // 至少要有一个内容字段
+                        if (!obj.text && !obj.url && !obj.emoji) return null;
+                        if (!obj.text && obj.emoji) obj.text = obj.emoji;
+
+                        return obj;
+                    }
+                    return null;
+                };
+
+                const pushAll = (arr, tab) => {
+                    if (!Array.isArray(arr)) return;
+                    arr.forEach((it) => {
+                        const obj = normalizeItem(it, tab);
+                        if (!obj) return;
+                        data[tab].push(obj);
+                        totalAdded++;
+                    });
+                };
+
+                // 主字卡可能的字段名
+                pushAll(
+                    pickArray('customReplies', 'replies', 'mottos', 'intros', 'statuses', 'pokes', 'words', 'cards', 'main'),
+                    'main'
+                );
+
+                // emoji
+                pushAll(pickArray('emojis', 'emoji'), 'emoji');
+
+                // 颜文字
+                pushAll(pickArray('kaomoji', 'kaomojis', 'faces'), 'kaomoji');
+            }
 
             if (totalAdded === 0) {
                 toast('文件里没有可导入的字卡');
@@ -686,7 +755,7 @@ function onWordCardImport() {
 
             set(KEYS.WORD_CARD, data);
 
-            // 清空筛选，切到主字卡，重新渲染
+            // 清空筛选，切到主字卡
             _currentWordCardFolder = null;
             _wordCardSelectMode = false;
             _selectedWordCardIds.clear();
@@ -694,7 +763,6 @@ function onWordCardImport() {
             // 保证当前 tab 有内容
             if (!data[_currentWordCardTab] || !data[_currentWordCardTab].length) {
                 _currentWordCardTab = 'main';
-                // 同步 tab 按钮
                 const tabsEl = byId('word-card-tabs');
                 if (tabsEl) {
                     tabsEl.querySelectorAll('[data-word-card-tab]').forEach((btn) => {
@@ -713,7 +781,7 @@ function onWordCardImport() {
         }
     };
     input.click();
-}
+              }
 
 function onWordCardExport() {
     const data = get(KEYS.WORD_CARD);
