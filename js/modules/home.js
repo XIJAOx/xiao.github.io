@@ -638,40 +638,6 @@ function calcAnniversaryDays(dateStr) {
     return `还有 ${-diff} 天`;
 }
 
-async function addAnniversary() {
-    const name = await mjPrompt('添加纪念日', {
-        placeholder: '如：在一起、生日',
-        confirmText: '下一步'
-    });
-    if (name === null) return;
-    const trimmed = String(name).trim();
-    if (!trimmed) return;
-
-    const date = await mjPrompt('日期', {
-        placeholder: '格式：2024-05-20',
-        confirmText: '保存'
-    });
-    if (date === null) return;
-    const dateTrimmed = String(date).trim();
-    if (!/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateTrimmed)) {
-        toast('日期格式不正确');
-        return;
-    }
-
-    const data = get(KEYS.ANNIVERSARY);
-    if (!Array.isArray(data.items)) data.items = [];
-    data.items.push({
-        id: uid('ann'),
-        name: trimmed,
-        date: dateTrimmed,
-        isYearly: true
-    });
-    set(KEYS.ANNIVERSARY, data);
-
-    renderAnniversaryList();
-    toast('已添加');
-}
-
 function deleteAnniversary(id) {
     const data = get(KEYS.ANNIVERSARY);
     data.items = (data.items || []).filter((x) => x.id !== id);
