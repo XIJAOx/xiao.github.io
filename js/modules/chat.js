@@ -1722,7 +1722,7 @@ function openEmojiPanel() {
                     const ok = await mjConfirm('删除这个表情包？', { title: '删除表情包' });
                     if (ok) {
                         const d = getStickers();
-                        d.items = d.items.filter(( !== sticker.id);
+                        d.items = d.items.filter((s) => s.id !== sticker.id);
                         saveStickers(d);
                         renderBody();
                         toast('已删除');
