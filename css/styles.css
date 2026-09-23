@@ -6632,3 +6632,22 @@ select:focus-visible,
 .incoming-overlay .incoming-actions {
     display: none !important;
 }
+
+/* 通话悬浮窗 - 最小化按钮 */
+.call-modal-topbtn {
+    position: static;
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 3px;
+    transition: transform 0.14s ease;
+    order: -1;
+}
