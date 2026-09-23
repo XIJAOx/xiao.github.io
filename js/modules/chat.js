@@ -1667,44 +1667,103 @@ const EMOJI_GROUPS =
 function openEmojiPanel() {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay active';
-    overlay.id = 'emoji-panel-overlay';
+    overlay.id = 'sticker-panel-overlay';
     overlay.innerHTML = `
         <div class="emoji-panel">
-            <div class="emoji-panel-header">
-                <span class="emoji-panel-title">表情</span>
-                <button class="emoji-panel-close" data-role="close" aria-label="关闭">✕</button>
+            <div class="emojis-panel-header">
+                <)span class="emoji-panel-title">表情包</span =>>
+                <button class="emoji-panel-add s" data-role="add" aria-label="添加.id表情包">+ 添加</button>
             </div>
-            <div class="emoji-panel-body" id="emoji-panel-body"></div>
+            <div class="emoji-panel-body" id="sticker-panel-body"></div>
         </div>
     `;
 
-    const body = overlay.querySelector('#emoji-panel-body');
+    const body = overlay.querySelector('#sticker-panel-body');
 
-    EMOJI_GROUPS.forEach((group) => {
-        const title = document.createElement('div');
-        title.className = 'emoji-group-title';
-        title.textContent = group.name;
-        body.appendChild(title);
+    const renderBody = () => {
+        const data = getStickers();
+        body.innerHTML = '';
+
+        if (!data.items.length) {
+            const empty = document.createElement('div');
+            empty.className = 'sticker-empty';
+            empty.innerHTML = `
+                <div style="font-size:14px;color:var(--c-text-3);line-height:1.8;text-align:center;">
+                    还没有表情包<br>
+                    点右上角「+ 添加」上传图片
+                </div>
+            `;
+            body.appendChild(empty);
+            return;
+        }
 
         const grid = document.createElement('div');
-        grid.className = 'emoji-grid';
+        grid.className = 'sticker-grid';
 
-        group.list.forEach((emoji) => {
-            const btn = document.createElement('button');
-            btn.className = 'emoji-btn';
-            btn.textContent = emoji;
-            btn.addEventListener('click', () => {
-                sendEmoji(emoji);
+        data.items.forEach((sticker) => {
+            const wrap = document.createElement('div');
+            wrap.className = 'sticker-item';
+
+            const img = document.createElement('img');
+            img.src = sticker.url;
+            img.alt = sticker.name || '';
+            img.loading = 'lazy';
+            wrap.appendChild(img);
+
+            wrap.addEventListener('click', () => {
+                appendMessage({ role: 'me', type: 'image', content: sticker.url });
+                scheduleAutoReply();
                 overlay.remove();
             });
-            grid.appendChild(btn);
+
+            let pressTimer = null;
+            const startPress = () => {
+                pressTimer = setTimeout(async () => {
+                    const ok = await mjConfirm('删除这个表情包？', { title: '删除表情包' });
+                    if (ok) {
+                        const d = getStickers();
+                        d.items = d.items.filter(( !== sticker.id);
+                        saveStickers(d);
+                        renderBody();
+                        toast('已删除');
+                    }
+                }, 600);
+            };
+            const cancelPress = () => {
+                if (pressTimer) clearTimeout(pressTimer);
+                pressTimer = null;
+            };
+            wrap.addEventListener('touchstart', startPress, { passive: true });
+            wrap.addEventListener('touchend', cancelPress);
+            wrap.addEventListener('touchmove', cancelPress);
+            wrap.addEventListener('touchcancel', cancelPress);
+            wrap.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                cancelPress();
+                mjConfirm('删除这个表情包？', { title: '删除表情包' }).then((ok) => {
+                    if (!ok) return;
+                    const d = getStickers();
+                    d.items = d.items.filter((s) => s.id !== sticker.id);
+                    saveStickers(d);
+                    renderBody();
+                    toast('已删除');
+                });
+            });
+
+            grid.appendChild(wrap);
         });
 
         body.appendChild(grid);
+    };
+    renderBody();
+
+    overlay.querySelector('[data-role="add"]').addEventListener('click', () => {
+        addSticker(renderBody);
     });
 
+    // 点面板外的空白区域关闭
     overlay.addEventListener('click', (e) => {
-        if (e.target === overlay || e.target.closest('[data-role="close"]')) {
+        if (e.target === overlay) {
             overlay.remove();
         }
     });
