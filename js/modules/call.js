@@ -209,6 +209,9 @@ function startTalking(taName) {
     _state = 'talking';
     _callStartAt = Date.now();
 
+   const miniBtn = byId('btn-card-minimize');
+    if (miniBtn) miniBtn.hidden = false;
+
     const overlay = byId('call-modal-overlay');
     if (overlay) overlay.dataset.callState = 'talking';
 
