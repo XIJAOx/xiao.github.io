@@ -190,6 +190,8 @@ export function startCall(name) {
         overlay.dataset.callState = 'outgoing';
     }
 
+       const miniBtn = byId('btn-card-minimize');
+    if (miniBtn) miniBtn.hidden = true;
     const waitSec = randomInt(OUTGOING_WAIT_MIN, OUTGOING_WAIT_MAX);
     const willReject = Math.random() < OUTGOING_REJECT_RATE;
 
