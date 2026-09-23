@@ -412,6 +412,9 @@ function acceptIncoming() {
     startDurationTimer();
 
     toast('已接听');
+
+   const miniBtn = byId('btn-card-minimize');
+    if (miniBtn) miniBtn.hidden = false;
 }
 
 function rejectIncoming() {
