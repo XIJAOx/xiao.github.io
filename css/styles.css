@@ -6445,3 +6445,190 @@ select:focus-visible,
 .screen:not(.active) {
     display: none !important;
 }
+
+/* ==========================================================================
+   通话悬浮窗（呼出 / 来电 / 通话中）
+   ========================================================================== */
+
+/* ---------- 两种 overlay 都改为底部悬浮 ---------- */
+
+.call-modal-overlay,
+.incoming-overlay {
+    position: fixed !important;
+    inset: auto 0 0 0 !important;
+    top: auto !important;
+    height: auto !important;
+    z-index: var(--z-call, 1000) !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding: 0 12px calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+    background: transparent !important;
+    pointer-events: none !important;
+    animation: none !important;
+}
+
+.call-modal-overlay[hidden],
+.incoming-overlay[hidden] {
+    display: none !important;
+}
+
+/* ---------- 卡片本身 ---------- */
+
+.call-modal,
+.incoming-modal {
+    pointer-events: auto !important;
+    position: relative !important;
+    width: 100% !important;
+    max-width: 380px !important;
+    background: linear-gradient(160deg, #2b2d42, #14151f) !important;
+    color: #fff !important;
+    border-radius: 20px !important;
+    padding: 12px 14px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
+    animation: float-in 0.3s cubic-bezier(0.22, 0.61, 0.36, 1) both !important;
+}
+
+@keyframes float-in {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 右上角最小化按钮 */
+.call-modal-topbtn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 3px;
+    transition: transform 0.14s ease;
+}
+
+.call-modal-topbtn:active {
+    transform: scale(0.9);
+}
+
+/* ---------- 头像 ---------- */
+
+.call-modal-avatar,
+.incoming-avatar {
+    width: 44px !important;
+    height: 44px !important;
+    flex: 0 0 auto !important;
+    border-radius: 50% !important;
+    overflow: hidden !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    animation: none !important;
+}
+
+.call-modal-avatar svg,
+.incoming-avatar svg {
+    width: 100% !important;
+    height: 100% !important;
+    padding: 8px !important;
+    display: block !important;
+}
+
+/* ---------- 中间信息区 ---------- */
+
+.call-modal-body,
+.incoming-body {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+}
+
+.call-modal-name,
+.incoming-name {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: #fff !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    margin: 0 !important;
+    text-align: left !important;
+}
+
+.call-modal-time,
+.incoming-status,
+.incoming-time,
+.incoming-countdown {
+    font-size: 12px !important;
+    color: rgba(255, 255, 255, 0.65) !important;
+    margin: 0 !important;
+    text-align: left !important;
+    font-variant-numeric: tabular-nums !important;
+    line-height: 1.4 !important;
+}
+
+/* 隐藏不用的元素 */
+.incoming-title {
+    display: none !important;
+}
+
+.incoming-time {
+    display: none !important;
+}
+
+/* ---------- 操作按钮 ---------- */
+
+.call-modal-btn,
+.incoming-btn {
+    width: 40px !important;
+    height: 40px !important;
+    flex: 0 0 auto !important;
+    border-radius: 50% !important;
+    font-size: 16px !important;
+    color: #fff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    transition: transform 0.14s ease !important;
+}
+
+.call-modal-btn.red,
+.incoming-btn.red {
+    background: linear-gradient(135deg, #ff7b7b, #e03c3c) !important;
+    box-shadow: 0 4px 12px rgba(224, 60, 60, 0.4) !important;
+    animation: none !important;
+}
+
+.incoming-btn.green {
+    background: linear-gradient(135deg, #69db7c, #37b24d) !important;
+    box-shadow: 0 4px 12px rgba(55, 178, 77, 0.4) !important;
+    animation: ring-shake 1.6s ease-in-out infinite !important;
+}
+
+.call-modal-btn:active,
+.incoming-btn:active {
+    transform: scale(0.92) !important;
+}
+
+/* ---------- 隐藏旧的全屏结构 ---------- */
+
+.call-modal-overlay .incoming-actions,
+.incoming-overlay .incoming-actions {
+    display: none !important;
+}
